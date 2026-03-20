@@ -28,15 +28,17 @@ This approach was chosen over per-user RocksDB directories (too complex for cros
 
 ## Data Model
 
-### New Table: `user`
+### New Table: `aim_user`
+
+Named `aim_user` (not `user`) to avoid the SQL reserved keyword.
 
 ```sql
-CREATE TABLE user (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    username     TEXT UNIQUE NOT NULL,
+CREATE TABLE aim_user (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,       -- bcrypt
-    is_admin     BOOLEAN DEFAULT FALSE,
-    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    is_admin      BOOLEAN DEFAULT FALSE,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
@@ -45,15 +47,15 @@ CREATE TABLE user (
 New columns added via Alembic migration:
 
 ```sql
-ALTER TABLE run ADD COLUMN user_id  INTEGER REFERENCES user(id);
-ALTER TABLE run ADD COLUMN is_public BOOLEAN DEFAULT FALSE;
+ALTER TABLE run ADD COLUMN user_id  INTEGER REFERENCES aim_user(id);
+ALTER TABLE run ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT FALSE;
 ```
 
 ### Modified Table: `experiment`
 
 ```sql
-ALTER TABLE experiment ADD COLUMN user_id  INTEGER REFERENCES user(id);
-ALTER TABLE experiment ADD COLUMN is_public BOOLEAN DEFAULT FALSE;
+ALTER TABLE experiment ADD COLUMN user_id  INTEGER REFERENCES aim_user(id);
+ALTER TABLE experiment ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT FALSE;
 ```
 
 ### New Table: `api_token` (Phase 3)
@@ -61,7 +63,7 @@ ALTER TABLE experiment ADD COLUMN is_public BOOLEAN DEFAULT FALSE;
 ```sql
 CREATE TABLE api_token (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id    INTEGER NOT NULL REFERENCES user(id),
+    user_id    INTEGER NOT NULL REFERENCES aim_user(id),
     name       TEXT NOT NULL,
     token_hash TEXT UNIQUE NOT NULL,   -- SHA-256 of the raw token
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -70,7 +72,7 @@ CREATE TABLE api_token (
 
 ### Migration Strategy
 
-A single Alembic migration adds all new columns. Existing rows get `user_id = NULL` and `is_public = FALSE`. Rows with `user_id IS NULL` are treated as legacy data visible to all authenticated users (smooth upgrade path).
+A single Alembic migration adds all new tables and columns. Existing `run` and `experiment` rows get `user_id = NULL` and `is_public = FALSE`. Rows with `user_id IS NULL` are treated as legacy data visible to all authenticated users, providing a smooth upgrade path without data loss.
 
 ---
 
@@ -81,32 +83,45 @@ A single Alembic migration adds all new columns. Existing rows get `user_id = NU
 ```
 POST /api/auth/login     { username, password } → { access_token, refresh_token }
 POST /api/auth/refresh   { refresh_token }      → { access_token }
-POST /api/auth/logout    (client clears tokens)
 ```
 
-- `access_token`: JWT, 8-hour expiry
-- `refresh_token`: JWT, 7-day expiry
+- `access_token`: JWT, 8-hour expiry, signed with `AIM_SECRET_KEY` env var (required; server refuses to start if unset)
+- `refresh_token`: JWT, 7-day expiry, same signing key
 - Passwords stored as bcrypt hashes
+- Both tokens passed as JSON body (not cookies) to align with the existing frontend `AuthToken` scaffolding
+
+**No logout endpoint.** The frontend clears tokens from `localStorage` on logout. Token blacklisting is out of scope.
+
+### JWT Secret Key
+
+Configured via `AIM_SECRET_KEY` environment variable. The server raises a startup error if this variable is missing. There is no auto-generated fallback (which would invalidate all tokens on restart).
 
 ### FastAPI Dependencies
 
-Two reusable dependencies in `aim/web/api/auth/deps.py`:
+Single reusable dependency in `aim/web/api/auth/deps.py`:
 
 ```python
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
-    """Required auth — raises HTTP 401 if not authenticated."""
-
-async def get_current_user_optional(token: str = ...) -> User | None:
-    """Optional auth — returns None if not authenticated (reserved for future public links)."""
+async def get_current_user(request: Request) -> AimUser:
+    """
+    Required auth — raises HTTP 401 if not authenticated.
+    Accepts two credential formats:
+      1. Authorization: Bearer <jwt>          (web UI)
+      2. Authorization: Bearer aim_tok_<hex>  (Personal API Token, Phase 3)
+    Identifies token type by 'aim_tok_' prefix.
+    """
 ```
 
-`get_current_user` accepts two credential types:
-1. **JWT** — issued by `/api/auth/login`, short-lived, used by the web UI
-2. **Personal API Token** — long-lived, used by Python SDK and scripts, passed as `Authorization: Bearer aim_tok_<value>`
+Both credential paths resolve to the same `AimUser` object. Business logic is credential-type agnostic. No `get_current_user_optional` is defined in these three phases.
 
-Both paths resolve to the same `User` object. Business logic is credential-type agnostic.
+### Auth Injection Strategy
 
-All existing routers receive `get_current_user` via `dependencies=[Depends(get_current_user)]` at the router level, requiring no changes to individual view functions.
+Auth is applied at the `api_app` level in `aim/web/api/__init__.py`:
+
+```python
+api_app = FastAPI(dependencies=[Depends(get_current_user)])
+```
+
+This covers all routers (runs, experiments, projects, tags, dashboards, reports, apps) without per-router changes.
 
 ### Admin CLI
 
@@ -128,7 +143,7 @@ All list/search queries on `run` and `experiment` apply this filter automaticall
 
 ```python
 # aim/web/api/utils/ownership.py
-def owned_or_public(query, model, current_user: User):
+def owned_or_public(query, model, current_user: AimUser):
     return query.filter(
         (model.user_id == current_user.id) |
         (model.is_public == True) |
@@ -143,7 +158,7 @@ This helper is called from a shared base layer, not repeated in individual view 
 Mutating operations (update, delete, archive) verify ownership before proceeding:
 
 ```python
-def assert_owner(obj, current_user: User):
+def assert_owner(obj, current_user: AimUser):
     if obj.user_id is not None and obj.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
 ```
@@ -157,25 +172,48 @@ PUT /api/runs/{run_id}/visibility        { is_public: bool }
 PUT /api/experiments/{exp_id}/visibility { is_public: bool }
 ```
 
-Owner-only. Returns 403 for non-owners.
+Owner-only. Returns 403 for non-owners. `is_public` defaults to `false` for all new runs/experiments regardless of creation method; visibility can only be changed via this API from the web UI.
 
-### New Run Ownership
+### New Run Ownership (Remote Tracking)
 
-When a run is created via `aim server` (remote tracking), the authenticated user's `user_id` is written to `run.user_id` at creation time. Runs created via local file system access retain `user_id = NULL`.
+When a run is created via `aim server`, `user_id` must be propagated from the HTTP transport layer into the run creation call. The implementation path:
+
+1. `aim/ext/transport/server.py`: validate the Bearer token from the request header, resolve to an `AimUser`, attach `user_id` to the request context
+2. `aim/ext/transport/handlers.py`: `get_structured_run()` reads `user_id` from context and passes it to `repo.request_props(hash_, read_only, created_at, user_id=user_id)`
+3. `aim/sdk/repo.py`: `request_props` forwards `user_id` to the structured DB `create_run()` call
+4. `aim/storage/structured/db.py`: `create_run()` accepts an optional `user_id` parameter and writes it to the `run` row
+
+Runs created via local file system access (`aim.Run(repo='/path')`) retain `user_id = NULL`.
 
 ---
 
 ## Personal API Token (Phase 3)
 
-Users generate tokens in the web UI settings page. The raw token value (format: `aim_tok_<32 random hex chars>`) is shown once and never stored. Only the SHA-256 hash is persisted in `api_token`.
+### Token Endpoints
 
-**Python SDK usage:**
+```
+GET    /api/settings/tokens             → list user's tokens (id, name, created_at; no hash)
+POST   /api/settings/tokens             { name } → { id, name, token, created_at }  (token shown once)
+DELETE /api/settings/tokens/{token_id}  → 204
+```
+
+Users generate tokens in the web UI settings page (`/settings`). The raw token value (format: `aim_tok_<32 random hex chars>`) is returned only in the `POST` response and never stored. Only the SHA-256 hash is persisted in `api_token`.
+
+### Python SDK Usage
 
 ```bash
 export AIM_API_TOKEN=aim_tok_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-The `aim server` remote tracking client reads this env var and sends it as `Authorization: Bearer <token>`. The existing `AIM_RT_BEARER_TOKEN` mechanism is unified into this new token system.
+The `aim server` remote tracking client (`aim/ext/transport/client.py`) reads `AIM_API_TOKEN` from the environment in `Client.__init__` and sets it in `self.request_headers`:
+
+```python
+token = os.environ.get('AIM_API_TOKEN')
+if token:
+    self.request_headers['Authorization'] = f'Bearer {token}'
+```
+
+The existing `AIM_RT_BEARER_TOKEN` constant in `aim/ext/transport/config.py` is replaced by `AIM_API_TOKEN`. The `get_current_user` dependency identifies Personal API Tokens by the `aim_tok_` prefix and validates them against SHA-256 hashes in the `api_token` table.
 
 ---
 
@@ -185,19 +223,19 @@ The `aim server` remote tracking client reads this env var and sends it as `Auth
 
 | Route | Purpose |
 |-------|---------|
-| `/login` | Username/password login form |
-| `/settings` | Personal API token management, change password |
+| `/sign-in` | Username/password login form |
+| `/settings` | Personal API token management (Phase 3), change password |
 | `/admin/users` | Create users, reset passwords (admin only) |
 
 ### Modified Behavior
 
-- **App startup**: Validates token on load; redirects to `/login` if missing or expired
+- **App startup**: Validates `access_token` from `localStorage` on load; attempts refresh via `POST /api/auth/refresh` with stored `refresh_token`; redirects to `/sign-in` if both are missing or expired
 - **Run / Experiment detail page**: Owner sees a public/private toggle switch
 - **All list/explorer pages**: No UI changes — filtering is backend-only
 
 ### Reusing Existing Scaffolding
 
-The frontend already has `AuthToken` types, `getAPIAuthToken()`, and `AUTH` endpoint constants in `services/api/`. These stubs are wired up to the real login flow with minimal changes.
+The frontend already has `AuthToken` types, `getAPIAuthToken()`, `setAuthToken()`, `removeAuthToken()`, and `AUTH` endpoint constants in `services/api/`. The existing refresh logic in `api.ts` uses a GET request; this will be updated to `POST /api/auth/refresh` with the `refresh_token` in the request body to match the spec.
 
 ---
 
@@ -205,11 +243,11 @@ The frontend already has `AuthToken` types, `getAPIAuthToken()`, and `AUTH` endp
 
 ### Phase 1 — Authentication Foundation
 
-1. Alembic migration: `user` table + ownership columns on `run` and `experiment`
+1. Alembic migration: `aim_user` table + ownership columns on `run` and `experiment`
 2. `aim users` CLI commands (create / list / reset-password)
 3. `POST /api/auth/login` and `POST /api/auth/refresh` endpoints
-4. `get_current_user` FastAPI dependency, injected into all existing routers
-5. Frontend: login page, JWT storage in `localStorage`, redirect-to-login guard
+4. `get_current_user` FastAPI dependency, applied to `api_app` in `aim/web/api/__init__.py`
+5. Frontend: `/sign-in` page, JWT storage in `localStorage`, token refresh on startup, redirect-to-sign-in guard
 
 **Deliverable:** Aim requires login. All existing data remains visible to all authenticated users.
 
@@ -219,16 +257,17 @@ The frontend already has `AuthToken` types, `getAPIAuthToken()`, and `AUTH` endp
 2. Owner assertion on all write operations
 3. `PUT /api/runs/{id}/visibility` and `PUT /api/experiments/{id}/visibility` endpoints
 4. Frontend: public/private toggle on run and experiment detail pages
-5. New run ownership assigned at creation time via remote tracking server
+5. New run ownership assigned at creation time via remote tracking server (propagation path described above)
 
-**Deliverable:** Each user sees only their own runs + public runs. Visibility is user-controlled.
+**Deliverable:** Each user sees only their own runs + public runs. Visibility is user-controlled via web UI.
 
 ### Phase 3 — Personal API Token
 
 1. `api_token` table + Alembic migration
-2. Token generation/revocation endpoints + frontend settings page
-3. `get_current_user` extended to validate Bearer API tokens
-4. `aim server` updated to read `AIM_API_TOKEN` env var
+2. `GET/POST/DELETE /api/settings/tokens` endpoints
+3. `get_current_user` extended to validate `aim_tok_` Bearer tokens against `api_token` table
+4. `aim/ext/transport/client.py` reads `AIM_API_TOKEN`, sets `Authorization` header; retire `AIM_RT_BEARER_TOKEN`
+5. Frontend settings page: list, generate, and revoke tokens
 
 **Deliverable:** Python SDK and scripts authenticate via API token without interactive login.
 
@@ -238,18 +277,24 @@ The frontend already has `AuthToken` types, `getAPIAuthToken()`, and `AUTH` endp
 
 | File | Change |
 |------|--------|
-| `aim/storage/structured/sql_engine/models.py` | Add `User`, `ApiToken` models; add `user_id`, `is_public` to `Run`, `Experiment` |
-| `aim/web/migrations/versions/` | New Alembic migration file |
-| `aim/web/api/auth/` | New module: login endpoints, JWT utils, `get_current_user` dependency |
+| `aim/storage/structured/sql_engine/models.py` | Add `AimUser`, `ApiToken` ORM models; add `user_id`, `is_public` to `Run`, `Experiment` |
+| `aim/web/migrations/versions/` | New Alembic migration: `aim_user` table, ownership columns, `api_token` table (Phase 3) |
+| `aim/web/api/__init__.py` | Apply `get_current_user` dependency to `api_app`; register auth router |
+| `aim/web/api/auth/` | New module: login/refresh endpoints, JWT utils, `get_current_user` dependency |
 | `aim/web/api/utils/ownership.py` | New file: `owned_or_public`, `assert_owner` helpers |
-| `aim/web/api/runs/views.py` | Inject auth dependency; apply ownership filter; add visibility endpoint |
+| `aim/web/api/runs/views.py` | Apply ownership filter; add visibility endpoint; add owner assertion on writes |
 | `aim/web/api/experiments/views.py` | Same as runs |
-| `aim/web/run.py` | Register auth router |
+| `aim/web/api/settings/` | New module: API token CRUD endpoints (Phase 3) |
+| `aim/web/run.py` | Read and validate `AIM_SECRET_KEY` at startup |
 | `aim/cli/users.py` | New CLI module for user management |
 | `aim/cli/__init__.py` | Register `users` command group |
-| `aim/ext/transport/` | Read `AIM_API_TOKEN`, pass as Bearer on remote tracking requests |
-| `aim/web/ui/src/pages/Login/` | New login page component |
-| `aim/web/ui/src/pages/Settings/` | New settings page (API token management) |
+| `aim/ext/transport/server.py` | Validate Bearer token, attach `user_id` to request context |
+| `aim/ext/transport/handlers.py` | Pass `user_id` from context to `repo.request_props()` |
+| `aim/ext/transport/client.py` | Read `AIM_API_TOKEN`, set `Authorization` header; retire `AIM_RT_BEARER_TOKEN` |
+| `aim/sdk/repo.py` | Forward `user_id` in `request_props` |
+| `aim/storage/structured/db.py` | Accept `user_id` in `create_run()` |
+| `aim/web/ui/src/pages/SignIn/` | New sign-in page component (route: `/sign-in`) |
+| `aim/web/ui/src/pages/Settings/` | New settings page (API token management, Phase 3) |
 | `aim/web/ui/src/pages/Admin/` | New admin user management page |
-| `aim/web/ui/src/services/api/api.ts` | Wire `getAPIAuthToken()` to JWT storage |
-| `aim/web/ui/src/App.tsx` | Add auth guard, route to `/login` |
+| `aim/web/ui/src/services/api/api.ts` | Update refresh to `POST` with body; wire token storage to real JWT flow |
+| `aim/web/ui/src/App.tsx` | Add auth guard, token refresh on startup, route to `/login` |
