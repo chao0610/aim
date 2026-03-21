@@ -13,6 +13,7 @@ from aim.ext.transport.message_utils import (
     pack_stream,
     unpack_args,
 )
+from aim.ext.transport.auth import resolve_user_id_from_request
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -114,6 +115,9 @@ class TrackingRouter:
             resource_handler = get_handler()
 
         try:
+            # Resolve user_id from auth header for StructuredRun ownership
+            user_id = resolve_user_id_from_request(request)
+
             resource_cls = self.registry[resource_type]
             if len(args) > 0:
                 kwargs = decode_tree(unpack_args(base64.b64decode(args)))
@@ -125,6 +129,10 @@ class TrackingRouter:
                         checked_kwargs[argname] = self.resource_pool[handler][1].ref
                     else:
                         checked_kwargs[argname] = arg
+
+                # Inject user_id for StructuredRun creation
+                if resource_type == 'StructuredRun' and user_id is not None:
+                    checked_kwargs['user_id'] = user_id
 
                 res = resource_cls(**checked_kwargs)
             else:

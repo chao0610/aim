@@ -59,7 +59,7 @@ def get_tree(**kwargs):
         return ResourceRef(repo.request_tree(name, sub, read_only=read_only))
 
 
-def get_structured_run(hash_, read_only, created_at, **kwargs):
+def get_structured_run(hash_, read_only, created_at, user_id=None, **kwargs):
     repo_path = os.environ.get(AIM_SERVER_MOUNTED_REPO_PATH)
     if repo_path:
         repo = Repo.from_path(repo_path)
@@ -67,7 +67,7 @@ def get_structured_run(hash_, read_only, created_at, **kwargs):
         repo = Repo.default_repo()
     if created_at is not None:
         created_at = datetime.fromtimestamp(created_at, tz=pytz.utc).replace(tzinfo=None)
-    return ResourceRef(repo.request_props(hash_, read_only, created_at))
+    return ResourceRef(repo.request_props(hash_, read_only, created_at, user_id=user_id))
 
 
 def get_repo():
