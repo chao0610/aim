@@ -10,7 +10,7 @@ from sqlalchemy.orm import sessionmaker
 os.environ.setdefault('AIM_SECRET_KEY', 'test-secret-key')
 
 from aim.storage.structured.sql_engine.models import AimUser, Base
-from aim.web.api.auth import views as views_module
+from aim.web.api.auth import deps as auth_deps
 from aim.web.api.auth.views import auth_router
 
 
@@ -39,7 +39,7 @@ def db_session():
 
 @pytest.fixture
 def app(db_session):
-    views_module._get_db_session = lambda: db_session
+    auth_deps._get_db_session = lambda: db_session
     app = FastAPI()
     app.include_router(auth_router, prefix='/api/auth')
     return app
