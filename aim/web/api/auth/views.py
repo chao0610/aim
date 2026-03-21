@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel
 
 from aim.storage.structured.sql_engine.models import AimUser
-from aim.web.api.auth.deps import _get_db_session
+from aim.web.api.auth import deps as auth_deps
 from aim.web.api.auth.jwt_utils import (
     create_access_token,
     create_refresh_token,
@@ -36,7 +36,7 @@ class AccessTokenResponse(BaseModel):
 
 @auth_router.post('/login', response_model=TokenResponse)
 async def login(body: LoginRequest):
-    session = _get_db_session()
+    session = auth_deps._get_db_session()
     user = session.query(AimUser).filter(AimUser.username == body.username).first()
     if not user:
         raise HTTPException(status_code=401, detail='Invalid username or password')
