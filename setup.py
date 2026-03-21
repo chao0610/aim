@@ -79,6 +79,8 @@ REQUIRED = [
     'watchdog',
     'websockets',
     'boto3',
+    'bcrypt>=4.0.0',
+    'PyJWT>=2.8.0',
 ]
 
 if sys.version_info.minor < 9:
