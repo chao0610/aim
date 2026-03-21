@@ -66,6 +66,14 @@ const ENDPOINTS = {
     UPDATE: '',
     DELETE: '',
   },
+  SETTINGS: {
+    BASE: '/settings',
+    TOKENS: 'tokens',
+  },
+  ADMIN: {
+    BASE: '/admin',
+    USERS: 'users',
+  },
 };
 
 export default ENDPOINTS;

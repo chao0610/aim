@@ -61,6 +61,14 @@ const SignIn = React.lazy(
   () => import(/* webpackChunkName: "signin" */ 'pages/SignIn/SignIn'),
 );
 
+const Settings = React.lazy(
+  () => import(/* webpackChunkName: "settings" */ 'pages/Settings/Settings'),
+);
+
+const AdminUsers = React.lazy(
+  () => import(/* webpackChunkName: "admin-users" */ 'pages/Admin/Users'),
+);
+
 const Reports = React.lazy(
   () => import(/* webpackChunkName: "Reports" */ 'pages/Reports'),
 );
@@ -271,6 +279,23 @@ const routes: { [key: string]: any } = {
     isExact: true,
     title: 'Sign In',
     isPublic: true,
+  },
+  SETTINGS: {
+    path: PathEnum.Settings,
+    component: Settings,
+    showInSidebar: true,
+    displayName: 'Settings',
+    icon: 'settings',
+    isExact: true,
+    title: 'Settings',
+  },
+  ADMIN_USERS: {
+    path: PathEnum.Admin_Users,
+    component: AdminUsers,
+    showInSidebar: false,
+    displayName: 'Admin Users',
+    isExact: true,
+    title: 'Admin — Users',
   },
 };
 

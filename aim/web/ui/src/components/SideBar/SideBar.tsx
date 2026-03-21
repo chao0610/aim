@@ -83,6 +83,15 @@ function SideBar(): React.FunctionComponentElement<React.ReactNode> {
             </div>
           </ul>
           <div className='Sidebar__bottom'>
+            <Tooltip title='Settings' placement='right'>
+              <NavLink
+                to={routes.SETTINGS.path}
+                className='Sidebar__bottom__anchor'
+                activeClassName='Sidebar__bottom__anchor--active'
+              >
+                <Icon name='settings' fontSize={20} />
+              </NavLink>
+            </Tooltip>
             <CommunityPopup>
               <Tooltip title='Community Discord' placement='right'>
                 <a
