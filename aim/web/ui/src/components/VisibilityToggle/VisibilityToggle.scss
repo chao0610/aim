@@ -1,0 +1,61 @@
+.VisibilityToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  &__switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  &__input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+
+    &:checked + .VisibilityToggle__slider {
+      background-color: #1c2852;
+    }
+
+    &:checked + .VisibilityToggle__slider::before {
+      transform: translateX(16px);
+    }
+
+    &:disabled + .VisibilityToggle__slider {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #b3b3b3;
+    border-radius: 10px;
+    transition: background-color 0.2s ease;
+
+    &::before {
+      content: '';
+      position: absolute;
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+    }
+  }
+
+  &__label {
+    font-size: 13px;
+    color: #414b6d;
+    user-select: none;
+  }
+}

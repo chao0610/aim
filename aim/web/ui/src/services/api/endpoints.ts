@@ -11,6 +11,7 @@ const ENDPOINTS = {
     GET: '',
     SEARCH: 'search',
     ACTIVE: 'active',
+    VISIBILITY: 'visibility',
   },
 
   EXPERIMENTS: {
@@ -22,6 +23,7 @@ const ENDPOINTS = {
     GET_ACTIVITY: 'activity',
     GET_NOTE: 'note',
     CREATE_NOTE: 'note',
+    VISIBILITY: 'visibility',
   },
 
   DASHBOARDS: {
