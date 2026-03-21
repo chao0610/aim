@@ -66,6 +66,10 @@ def create_app():
     api_app.include_router(reports_router, prefix='/reports', dependencies=auth_dep)
     api_app.include_router(visibility_router, prefix='', dependencies=auth_dep)
 
+    from aim.web.api.settings.views import settings_router
+
+    api_app.include_router(settings_router, prefix='/settings', dependencies=auth_dep)
+
     base_path = os.environ.get(AIM_UI_BASE_PATH, '')
 
     app.mount(f'{base_path}/api', api_app)
