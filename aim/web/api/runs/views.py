@@ -43,11 +43,15 @@ from aim.web.api.runs.utils import (
     run_logs_streamer,
     run_search_result_streamer,
 )
+from aim.web.api.auth.deps import get_current_user
+from aim.web.api.ownership import assert_owner
 from aim.web.api.utils import (
     APIRouter,  # wrapper for fastapi.APIRouter
     check_read_only,
     object_factory,
 )
+from aim.storage.structured.sql_engine.models import AimUser
+from aim.storage.structured.sql_engine.models import Run as RunModel
 from fastapi import Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from starlette import status
@@ -182,11 +186,18 @@ async def run_metric_batch_api(run_id: str, requested_traces: RunTracesBatchApiI
 
 @runs_router.put('/{run_id}/', response_model=StructuredRunUpdateOut)
 @check_read_only
-async def update_run_properties_api(run_id: str, run_in: StructuredRunUpdateIn, factory=Depends(object_factory)):
+async def update_run_properties_api(
+    run_id: str, run_in: StructuredRunUpdateIn, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
+):
     with factory:
         run = factory.find_run(run_id)
         if not run:
             raise HTTPException(status_code=404)
+
+        # Check ownership via SQLAlchemy model
+        run_model = factory._session.query(RunModel).filter(RunModel.hash == run_id).first()
+        if run_model:
+            assert_owner(run_model, current_user)
 
         if run_in.name is not None:
             run.name = run_in.name.strip()
@@ -200,11 +211,17 @@ async def update_run_properties_api(run_id: str, run_in: StructuredRunUpdateIn, 
 
 
 @runs_router.post('/{run_id}/tags/new/', response_model=StructuredRunAddTagOut)
-async def add_run_tag_api(run_id: str, tag_in: StructuredRunAddTagIn, factory=Depends(object_factory)):
+async def add_run_tag_api(
+    run_id: str, tag_in: StructuredRunAddTagIn, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
+):
     with factory:
         run = factory.find_run(run_id)
         if not run:
             raise HTTPException(status_code=404)
+
+        run_model = factory._session.query(RunModel).filter(RunModel.hash == run_id).first()
+        if run_model:
+            assert_owner(run_model, current_user)
 
         run.add_tag(tag_in.tag_name)
         tag = next(iter(factory.search_tags(tag_in.tag_name)))
@@ -212,12 +229,18 @@ async def add_run_tag_api(run_id: str, tag_in: StructuredRunAddTagIn, factory=De
 
 
 @runs_router.delete('/{run_id}/tags/{tag_id}/', response_model=StructuredRunRemoveTagOut)
-async def remove_run_tag_api(run_id: str, tag_id: str, factory=Depends(object_factory)):
+async def remove_run_tag_api(
+    run_id: str, tag_id: str, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
+):
     with factory:
         run = factory.find_run(run_id)
         tag = factory.find_tag(tag_id)
         if not (run or tag):
             raise HTTPException(status_code=404)
+
+        run_model = factory._session.query(RunModel).filter(RunModel.hash == run_id).first()
+        if run_model:
+            assert_owner(run_model, current_user)
 
         removed = run.remove_tag(tag.name)
 
@@ -226,7 +249,14 @@ async def remove_run_tag_api(run_id: str, tag_id: str, factory=Depends(object_fa
 
 @runs_router.delete('/{run_id}/')
 @check_read_only
-async def delete_run_api(run_id: str):
+async def delete_run_api(run_id: str, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)):
+    # Check ownership
+    session = factory.get_session()
+    run_model = session.query(RunModel).filter(RunModel.hash == run_id).first()
+    if not run_model:
+        raise HTTPException(status_code=404)
+    assert_owner(run_model, current_user)
+
     repo = get_project_repo()
     success = repo.delete_run(run_id)
     if not success:
@@ -239,7 +269,16 @@ async def delete_run_api(run_id: str):
 
 @runs_router.post('/delete-batch/')
 @check_read_only
-async def delete_runs_batch_api(runs_batch: RunsBatchIn):
+async def delete_runs_batch_api(
+    runs_batch: RunsBatchIn, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
+):
+    # Check ownership of all runs before deleting any
+    session = factory.get_session()
+    for run_hash in runs_batch:
+        run_model = session.query(RunModel).filter(RunModel.hash == run_hash).first()
+        if run_model:
+            assert_owner(run_model, current_user)
+
     repo = get_project_repo()
     success, remaining_runs = repo.delete_runs(runs_batch)
     if not success:
@@ -254,12 +293,18 @@ async def delete_runs_batch_api(runs_batch: RunsBatchIn):
 @runs_router.post('/archive-batch/', response_model=StructuredRunsArchivedOut)
 @check_read_only
 async def archive_runs_batch_api(
-    runs_batch: RunsBatchIn, archive: Optional[bool] = True, factory=Depends(object_factory)
+    runs_batch: RunsBatchIn, archive: Optional[bool] = True, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
 ):
     with factory:
         runs = factory.find_runs(runs_batch)
         if not runs:
             raise HTTPException(status_code=404)
+
+        # Check ownership of all runs before modifying any
+        for run in runs:
+            run_model = factory._session.query(RunModel).filter(RunModel.hash == run.hash).first()
+            if run_model:
+                assert_owner(run_model, current_user)
 
         for run in runs:
             run.archived = archive
@@ -283,11 +328,15 @@ def list_note_api(run_id, factory=Depends(object_factory)):
 
 
 @runs_router.post('/{run_id}/note/', status_code=status.HTTP_201_CREATED)
-def create_note_api(run_id, note_in: NoteIn, factory=Depends(object_factory)):
+def create_note_api(run_id, note_in: NoteIn, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)):
     with factory:
         run = factory.find_run(run_id)
         if not run:
             raise HTTPException(status_code=404)
+
+        run_model = factory._session.query(RunModel).filter(RunModel.hash == run_id).first()
+        if run_model:
+            assert_owner(run_model, current_user)
 
         note_content = note_in.content.strip()
         note = run.add_note(note_content)
@@ -317,11 +366,15 @@ def get_note_api(run_id, _id: int, factory=Depends(object_factory)):
 
 
 @runs_router.put('/{run_id}/note/{_id}')
-def update_note_api(run_id, _id: int, note_in: NoteIn, factory=Depends(object_factory)):
+def update_note_api(run_id, _id: int, note_in: NoteIn, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)):
     with factory:
         run = factory.find_run(run_id)
         if not run:
             raise HTTPException(status_code=404)
+
+        run_model = factory._session.query(RunModel).filter(RunModel.hash == run_id).first()
+        if run_model:
+            assert_owner(run_model, current_user)
 
         note = run.find_note(_id=_id)
         if not note:
@@ -338,11 +391,15 @@ def update_note_api(run_id, _id: int, note_in: NoteIn, factory=Depends(object_fa
 
 
 @runs_router.delete('/{run_id}/note/{_id}')
-def delete_note_api(run_id, _id: int, factory=Depends(object_factory)):
+def delete_note_api(run_id, _id: int, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)):
     with factory:
         run = factory.find_run(run_id)
         if not run:
             raise HTTPException(status_code=404)
+
+        run_model = factory._session.query(RunModel).filter(RunModel.hash == run_id).first()
+        if run_model:
+            assert_owner(run_model, current_user)
 
         note = run.find_note(_id=_id)
         if not note:
