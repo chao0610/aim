@@ -33,6 +33,7 @@ def create_app():
     from aim.web.api.tags.views import tags_router
     from aim.web.api.utils import ResourceCleanupMiddleware
     from aim.web.api.views import statics_router
+    from aim.web.api.visibility import visibility_router
     from aim.web.configs import AIM_UI_BASE_PATH
 
     api_app = FastAPI()
@@ -63,6 +64,7 @@ def create_app():
     api_app.include_router(runs_router, prefix='/runs', dependencies=auth_dep)
     api_app.include_router(tags_router, prefix='/tags', dependencies=auth_dep)
     api_app.include_router(reports_router, prefix='/reports', dependencies=auth_dep)
+    api_app.include_router(visibility_router, prefix='', dependencies=auth_dep)
 
     base_path = os.environ.get(AIM_UI_BASE_PATH, '')
 
