@@ -2,6 +2,9 @@ from collections import Counter
 from datetime import timedelta
 from typing import Optional
 
+from aim.storage.structured.sql_engine.models import AimUser
+from aim.storage.structured.sql_engine.models import Experiment as ExperimentModel
+from aim.web.api.auth.deps import get_current_user
 from aim.web.api.experiments.pydantic_models import (
     ExperimentActivityApiOut,
     ExperimentCreateIn,
@@ -11,11 +14,12 @@ from aim.web.api.experiments.pydantic_models import (
     ExperimentUpdateIn,
     ExperimentUpdateOut,
 )
+from aim.web.api.ownership import assert_owner, owned_or_public
 from aim.web.api.projects.project import Project
 from aim.web.api.runs.pydantic_models import NoteIn
 from aim.web.api.runs.utils import get_project_repo
 from aim.web.api.utils import (
-    APIRouter,  # wrapper for fastapi.APIRouter  # wrapper for fastapi.APIRouter
+    APIRouter,  # wrapper for fastapi.APIRouter
     check_read_only,
     object_factory,
 )
@@ -29,47 +33,70 @@ NOTE_NOT_FOUND = 'Note with id {id} is not found in this experiment.'
 
 
 @experiment_router.get('/', response_model=ExperimentListOut)
-async def get_experiments_list_api(factory=Depends(object_factory)):
+async def get_experiments_list_api(factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)):
+    session = factory.get_session()
+    query = session.query(ExperimentModel)
+    filtered = owned_or_public(query, ExperimentModel, current_user)
     return [
         {
             'id': exp.uuid,
             'name': exp.name,
             'description': exp.description,
             'run_count': len(exp.runs),
-            'archived': exp.archived,
-            'creation_time': exp.creation_time,
+            'archived': exp.is_archived,
+            'creation_time': exp.created_at,
         }
-        for exp in factory.experiments()
+        for exp in filtered.all()
     ]
 
 
 @experiment_router.get('/search/', response_model=ExperimentListOut)
-async def search_experiments_by_name_api(request: Request, factory=Depends(object_factory)):
+async def search_experiments_by_name_api(
+    request: Request, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
+):
     params = request.query_params
     search_term = params.get('q') or ''
-    search_term.strip()
+    search_term = search_term.strip()
 
+    session = factory.get_session()
+    query = session.query(ExperimentModel).filter(ExperimentModel.name.like(f'%{search_term}%'))
+    filtered = owned_or_public(query, ExperimentModel, current_user)
     return [
-        {'id': exp.uuid, 'name': exp.name, 'run_count': len(exp.runs), 'archived': exp.archived}
-        for exp in factory.search_experiments(search_term)
+        {'id': exp.uuid, 'name': exp.name, 'run_count': len(exp.runs), 'archived': exp.is_archived}
+        for exp in filtered.all()
     ]
 
 
 @experiment_router.post('/', response_model=ExperimentUpdateOut)
-async def create_experiment_api(exp_in: ExperimentCreateIn, factory=Depends(object_factory)):
+async def create_experiment_api(
+    exp_in: ExperimentCreateIn, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
+):
     with factory:
         try:
             exp = factory.create_experiment(exp_in.name.strip())
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
+        # Set ownership on the underlying model
+        session = factory.get_session()
+        model = session.query(ExperimentModel).filter(ExperimentModel.uuid == exp.uuid).first()
+        if model:
+            model.user_id = current_user.id
 
     return {'id': exp.uuid, 'status': 'OK'}
 
 
 @experiment_router.get('/{exp_id}/', response_model=ExperimentGetOut)
-async def get_experiment_api(exp_id: str, factory=Depends(object_factory)):
+async def get_experiment_api(
+    exp_id: str, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
+):
     exp = factory.find_experiment(exp_id)
     if not exp:
+        raise HTTPException(status_code=404)
+
+    # Check visibility
+    session = factory.get_session()
+    model = session.query(ExperimentModel).filter(ExperimentModel.uuid == exp_id).first()
+    if model and model.user_id is not None and model.user_id != current_user.id and not model.is_public:
         raise HTTPException(status_code=404)
 
     response = {
@@ -85,7 +112,16 @@ async def get_experiment_api(exp_id: str, factory=Depends(object_factory)):
 
 @experiment_router.delete('/{exp_id}/')
 @check_read_only
-async def delete_experiment_api(exp_id: str):
+async def delete_experiment_api(
+    exp_id: str, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
+):
+    # Check ownership first
+    session = factory.get_session()
+    model = session.query(ExperimentModel).filter(ExperimentModel.uuid == exp_id).first()
+    if not model:
+        raise HTTPException(status_code=404)
+    assert_owner(model, current_user)
+
     repo = get_project_repo()
     success = repo.delete_experiment(exp_id)
     if not success:
@@ -96,10 +132,21 @@ async def delete_experiment_api(exp_id: str):
 
 @experiment_router.put('/{exp_id}/', response_model=ExperimentUpdateOut)
 @check_read_only
-async def update_experiment_properties_api(exp_id: str, exp_in: ExperimentUpdateIn, factory=Depends(object_factory)):
+async def update_experiment_properties_api(
+    exp_id: str,
+    exp_in: ExperimentUpdateIn,
+    factory=Depends(object_factory),
+    current_user: AimUser = Depends(get_current_user),
+):
     exp = factory.find_experiment(exp_id)
     if not exp:
         raise HTTPException(status_code=404)
+
+    # Check ownership via underlying model
+    session = factory.get_session()
+    model = session.query(ExperimentModel).filter(ExperimentModel.uuid == exp_id).first()
+    if model:
+        assert_owner(model, current_user)
 
     if exp_in.name:
         from sqlalchemy.exc import IntegrityError
@@ -123,12 +170,22 @@ async def update_experiment_properties_api(exp_id: str, exp_in: ExperimentUpdate
 
 @experiment_router.get('/{exp_id}/runs/', response_model=ExperimentGetRunsOut)
 async def get_experiment_runs_api(
-    exp_id: str, limit: Optional[int] = None, offset: Optional[str] = None, factory=Depends(object_factory)
+    exp_id: str,
+    limit: Optional[int] = None,
+    offset: Optional[str] = None,
+    factory=Depends(object_factory),
+    current_user: AimUser = Depends(get_current_user),
 ):
     project = Project()
 
     exp = factory.find_experiment(exp_id)
     if not exp:
+        raise HTTPException(status_code=404)
+
+    # Check visibility
+    session = factory.get_session()
+    model = session.query(ExperimentModel).filter(ExperimentModel.uuid == exp_id).first()
+    if model and model.user_id is not None and model.user_id != current_user.id and not model.is_public:
         raise HTTPException(status_code=404)
 
     from aim.sdk.run import Run
@@ -172,7 +229,7 @@ async def get_experiment_runs_api(
 
 
 @experiment_router.get('/{exp_id}/note/')
-async def list_note_api(exp_id, factory=Depends(object_factory)):
+async def list_note_api(exp_id, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)):
     with factory:
         experiment = factory.find_experiment(exp_id)
         if not experiment:
@@ -184,7 +241,9 @@ async def list_note_api(exp_id, factory=Depends(object_factory)):
 
 
 @experiment_router.post('/{exp_id}/note/', status_code=201)
-async def create_note_api(exp_id, note_in: NoteIn, factory=Depends(object_factory)):
+async def create_note_api(
+    exp_id, note_in: NoteIn, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
+):
     with factory:
         experiment = factory.find_experiment(exp_id)
         if not experiment:
@@ -200,7 +259,9 @@ async def create_note_api(exp_id, note_in: NoteIn, factory=Depends(object_factor
 
 
 @experiment_router.get('/{exp_id}/note/{_id}')
-async def get_note_api(exp_id, _id: int, factory=Depends(object_factory)):
+async def get_note_api(
+    exp_id, _id: int, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
+):
     with factory:
         experiment = factory.find_experiment(exp_id)
         if not experiment:
@@ -218,7 +279,13 @@ async def get_note_api(exp_id, _id: int, factory=Depends(object_factory)):
 
 
 @experiment_router.put('/{exp_id}/note/{_id}')
-async def update_note_api(exp_id, _id: int, note_in: NoteIn, factory=Depends(object_factory)):
+async def update_note_api(
+    exp_id,
+    _id: int,
+    note_in: NoteIn,
+    factory=Depends(object_factory),
+    current_user: AimUser = Depends(get_current_user),
+):
     with factory:
         experiment = factory.find_experiment(exp_id)
         if not experiment:
@@ -239,7 +306,9 @@ async def update_note_api(exp_id, _id: int, note_in: NoteIn, factory=Depends(obj
 
 
 @experiment_router.delete('/{exp_id}/note/{_id}')
-async def delete_note_api(exp_id, _id: int, factory=Depends(object_factory)):
+async def delete_note_api(
+    exp_id, _id: int, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
+):
     with factory:
         experiment = factory.find_experiment(exp_id)
         if not experiment:
@@ -256,7 +325,10 @@ async def delete_note_api(exp_id, _id: int, factory=Depends(object_factory)):
 
 @experiment_router.get('/{exp_id}/activity/', response_model=ExperimentActivityApiOut)
 async def experiment_runs_activity_api(
-    exp_id, x_timezone_offset: int = Header(default=0), factory=Depends(object_factory)
+    exp_id,
+    x_timezone_offset: int = Header(default=0),
+    factory=Depends(object_factory),
+    current_user: AimUser = Depends(get_current_user),
 ):
     project = Project()
 
@@ -266,6 +338,12 @@ async def experiment_runs_activity_api(
     with factory:
         experiment = factory.find_experiment(exp_id)
         if not experiment:
+            raise HTTPException(status_code=404)
+
+        # Check visibility
+        session = factory.get_session()
+        model = session.query(ExperimentModel).filter(ExperimentModel.uuid == exp_id).first()
+        if model and model.user_id is not None and model.user_id != current_user.id and not model.is_public:
             raise HTTPException(status_code=404)
 
         active_run_hashes = project.repo.list_active_runs()
