@@ -49,8 +49,11 @@ class Run(Base):
 
     # relationships
     experiment_id = Column(ForeignKey('experiment.id'), nullable=True)
+    user_id = Column(Integer, ForeignKey('aim_user.id'), nullable=True)
+    is_public = Column(Boolean, default=False, nullable=False)
 
     experiment = relationship('Experiment', backref=backref('runs', uselist=True, order_by='Run.created_at.desc()'))
+    owner = relationship('AimUser', foreign_keys=[user_id])
     tags = relationship(
         'Tag', secondary=run_tags, backref=backref('runs', uselist=True), cascade='all, delete', passive_deletes=True
     )
@@ -72,6 +75,10 @@ class Experiment(Base):
     # relationships
 
     notes = relationship('Note', back_populates='experiment')
+    user_id = Column(Integer, ForeignKey('aim_user.id'), nullable=True)
+    is_public = Column(Boolean, default=False, nullable=False)
+
+    owner = relationship('AimUser', foreign_keys=[user_id])
 
     is_archived = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
