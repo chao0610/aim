@@ -11,7 +11,7 @@ from typing import Tuple
 
 import requests
 
-from aim.ext.transport.config import AIM_CLIENT_SSL_CERTIFICATES_FILE
+from aim.ext.transport.config import AIM_API_TOKEN, AIM_CLIENT_SSL_CERTIFICATES_FILE, AIM_RT_BEARER_TOKEN
 from aim.ext.transport.heartbeat import HeartbeatSender
 from aim.ext.transport.message_utils import (
     decode_tree,
@@ -51,6 +51,11 @@ class Client:
         if self.ssl_certfile:
             self.ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
             self.ssl_context.load_cert_chain(certfile=self.ssl_certfile)
+
+        # Set auth token from environment (AIM_API_TOKEN preferred, AIM_RT_BEARER_TOKEN as fallback)
+        token = os.environ.get(AIM_API_TOKEN) or os.environ.get(AIM_RT_BEARER_TOKEN)
+        if token:
+            self.request_headers['Authorization'] = f'Bearer {token}'
 
         self.protocol_probe()
 

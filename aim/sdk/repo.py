@@ -320,7 +320,7 @@ class Repo:
             self.container_pool[container_config] = container
         return container
 
-    def request_props(self, hash_: str, read_only: bool, created_at: 'datetime' = None):
+    def request_props(self, hash_: str, read_only: bool, created_at: 'datetime' = None, user_id: int = None):
         if self.is_remote_repo:
             return StructuredRunProxy(self._client, hash_, read_only, created_at)
 
@@ -336,7 +336,7 @@ class Repo:
                     raise RepoIntegrityError(f'Missing props for Run {hash_}')
                 else:
                     with self._sdb_lock:
-                        _props = self.structured_db.create_run(hash_, created_at)
+                        _props = self.structured_db.create_run(hash_, created_at, user_id=user_id)
             if self.run_props_cache_hint:
                 self.structured_db.caches[self.run_props_cache_hint][hash_] = _props
 

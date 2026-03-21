@@ -46,9 +46,15 @@ class ModelMappedFactory(ObjectFactory):
     def find_runs(self, ids: List[str]) -> List[Run]:
         return ModelMappedRun.find_many(ids, session=self._session or self.get_session())
 
-    def create_run(self, runhash: str, created_at: datetime = None) -> Run:
+    def create_run(self, runhash: str, created_at: datetime = None, user_id: int = None) -> Run:
         run = ModelMappedRun.from_hash(runhash, created_at, session=self._session or self.get_session())
         run.experiment = 'default'
+        if user_id is not None:
+            from aim.storage.structured.sql_engine.models import Run as RunModel
+            session = self._session or self.get_session()
+            run_model = session.query(RunModel).filter(RunModel.hash == runhash).first()
+            if run_model:
+                run_model.user_id = user_id
         return run
 
     def delete_run(self, runhash: str) -> bool:
