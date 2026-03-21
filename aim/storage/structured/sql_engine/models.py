@@ -151,3 +151,35 @@ class RunInfo(Base):
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     last_notification_index = Column(Integer, default=-1)
     run = relationship('Run', uselist=False, backref=backref('info', uselist=False))
+
+
+class AimUser(Base):
+    __tablename__ = 'aim_user'
+
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    username = Column(Text, unique=True, nullable=False)
+    password_hash = Column(Text, nullable=False)
+    is_admin = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    def __init__(self, username, password_hash, is_admin=False):
+        self.username = username
+        self.password_hash = password_hash
+        self.is_admin = is_admin
+
+
+class ApiToken(Base):
+    __tablename__ = 'api_token'
+
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    user_id = Column(Integer, ForeignKey('aim_user.id'), nullable=False)
+    name = Column(Text, nullable=False)
+    token_hash = Column(Text, unique=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship('AimUser', backref=backref('tokens', uselist=True))
+
+    def __init__(self, user_id, name, token_hash):
+        self.user_id = user_id
+        self.name = name
+        self.token_hash = token_hash
