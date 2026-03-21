@@ -5,7 +5,7 @@ from aim.sdk.configs import get_aim_repo_name
 from aim.web.configs import AIM_PROFILER_KEY
 from aim.web.middlewares.profiler import PyInstrumentProfilerMiddleware
 from aim.web.utils import get_root_path
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -46,15 +46,23 @@ def create_app():
             PyInstrumentProfilerMiddleware, repo_path=os.path.join(get_root_path(), get_aim_repo_name())
         )
 
+    from aim.web.api.auth.deps import get_current_user
+    from aim.web.api.auth.views import auth_router
+
     add_api_routes()
 
-    api_app.include_router(dashboard_apps_router, prefix='/apps')
-    api_app.include_router(dashboards_router, prefix='/dashboards')
-    api_app.include_router(experiment_router, prefix='/experiments')
-    api_app.include_router(projects_router, prefix='/projects')
-    api_app.include_router(runs_router, prefix='/runs')
-    api_app.include_router(tags_router, prefix='/tags')
-    api_app.include_router(reports_router, prefix='/reports')
+    # Auth routes are public (no auth required)
+    api_app.include_router(auth_router, prefix='/auth')
+
+    # All other routes require authentication
+    auth_dep = [Depends(get_current_user)]
+    api_app.include_router(dashboard_apps_router, prefix='/apps', dependencies=auth_dep)
+    api_app.include_router(dashboards_router, prefix='/dashboards', dependencies=auth_dep)
+    api_app.include_router(experiment_router, prefix='/experiments', dependencies=auth_dep)
+    api_app.include_router(projects_router, prefix='/projects', dependencies=auth_dep)
+    api_app.include_router(runs_router, prefix='/runs', dependencies=auth_dep)
+    api_app.include_router(tags_router, prefix='/tags', dependencies=auth_dep)
+    api_app.include_router(reports_router, prefix='/reports', dependencies=auth_dep)
 
     base_path = os.environ.get(AIM_UI_BASE_PATH, '')
 
