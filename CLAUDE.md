@@ -92,9 +92,28 @@ React 17 + TypeScript. Key patterns:
 - **Boards feature**: Python-in-browser via Pyodide (`services/pyodide/`)
 - API client: `services/api/api.ts` (fetch wrapper) + `services/api/endpoints.ts` (URL constants)
 
-### Authentication (Current State)
+### Authentication
 
-**There is no auth in the open-source build.** CORS is `allow_origins=['*']`. The `--read-only` flag blocks mutations but is not auth. The frontend has scaffolded `AuthToken` types and `AUTH` endpoints that appear to be stubs for a paid enterprise layer, not active. The remote tracking server supports a single bearer token via `AIM_RT_BEARER_TOKEN`.
+**JWT-based multi-user auth is enabled on the `main-server` branch.** The system requires `AIM_SECRET_KEY` to be set before starting the server. CORS remains `allow_origins=['*']`.
+
+Key pieces:
+- `aim/web/api/auth/` — auth module: `jwt_utils.py` (token creation/decoding), `deps.py` (`get_current_user` FastAPI dependency), `views.py` (login/refresh endpoints)
+- `aim/web/api/ownership.py` — `owned_or_public()` SQLAlchemy filter, `assert_owner()` 403 guard
+- `aim/web/api/visibility.py` — `PUT /runs/{id}/visibility` and `PUT /experiments/{id}/visibility`
+- `aim/web/api/settings/` — API token CRUD (`/settings/tokens`)
+- `aim/web/api/admin/` — admin user management (`/admin/users`)
+- `aim/web/run.py` — validates `AIM_SECRET_KEY` at startup
+- Frontend sign-in page: `aim/web/ui/src/pages/SignIn/`
+- Frontend settings page: `aim/web/ui/src/pages/Settings/`
+- Frontend admin page: `aim/web/ui/src/pages/Admin/`
+
+**Env vars:**
+- `AIM_SECRET_KEY` (required) — JWT signing secret
+- `AIM_API_TOKEN` — SDK transport auth token (preferred over legacy `AIM_RT_BEARER_TOKEN`)
+
+**Initial setup:** Create the first admin user with `aim users create --username admin --admin`.
+
+**Testing:** All auth tests in `tests/api/` run with `--noconftest` due to Cython imports in conftest. The `deps._get_db_session` function is monkey-patchable for test isolation — always import it via `from aim.web.api.auth import deps as auth_deps` and call `auth_deps._get_db_session()` (not a direct import) to ensure testability.
 
 ## Key Files & Locations
 
