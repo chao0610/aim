@@ -101,8 +101,8 @@ function getStream<ResponseDataType>(
       options?.method === 'POST'
         ? ''
         : params
-        ? '?' + new URLSearchParams(params).toString()
-        : ''
+          ? '?' + new URLSearchParams(params).toString()
+          : ''
     }`,
     {
       method: 'GET',
@@ -302,18 +302,16 @@ function removeRefreshToken(): void {
 }
 
 /**
- * refreshToken is a function that makes a GET request to the auth endpoint for refresh the token
+ * refreshToken is a function that makes a POST request to the auth endpoint for refresh the token
  * @returns IResponse<AuthToken>
  * @throws Error
  */
 function refreshToken() {
-  return get<AuthToken>(
+  const refresh_token = Cookies.get('token') || '';
+  return post<AuthToken>(
     `${ENDPOINTS.AUTH.BASE}/${ENDPOINTS.AUTH.REFRESH}`,
-    undefined,
-    {
-      credentials:
-        process.env.NODE_ENV === 'development' ? 'include' : 'same-origin',
-    },
+    { refresh_token },
+    {},
     `${window.location.origin}/api`,
   );
 }

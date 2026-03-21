@@ -12,6 +12,7 @@ import BusyLoaderWrapper from 'components/BusyLoaderWrapper/BusyLoaderWrapper';
 import ErrorBoundary from 'components/ErrorBoundary/ErrorBoundary';
 
 import { getBasePath } from 'config/config';
+import { PathEnum } from 'config/enums/routesEnum';
 
 import PageWrapper from 'pages/PageWrapper';
 
@@ -23,6 +24,10 @@ import { IProjectsModelState } from './types/services/models/projects/projectsMo
 import usePyodide from './services/pyodide/usePyodide';
 
 import './App.scss';
+
+const SignIn = React.lazy(
+  () => import(/* webpackChunkName: "signin" */ 'pages/SignIn/SignIn'),
+);
 
 const basePath = getBasePath(false);
 
@@ -36,6 +41,15 @@ loader.config({
 function App(): React.FunctionComponentElement<React.ReactNode> {
   const projectsData = useModel<Partial<IProjectsModelState>>(projectsModel);
   const { loadPyodide } = usePyodide();
+
+  const authToken = localStorage.getItem('Auth');
+  const isSignInPage = window.location.pathname.endsWith('/sign-in');
+
+  React.useEffect(() => {
+    if (!authToken && !isSignInPage) {
+      window.location.assign(`${basePath}/sign-in`);
+    }
+  }, []);
 
   React.useEffect(() => {
     let timeoutId: number;
@@ -58,44 +72,65 @@ function App(): React.FunctionComponentElement<React.ReactNode> {
     <BrowserRouter basename={basePath}>
       <ProjectWrapper />
       <Theme>
-        {projectsData?.project?.warn_index && (
-          <AlertBanner type='warning'>
-            Index db was corrupted and deleted. Please run
-            <b>`aim storage reindex`</b> command to restore optimal performance.
-          </AlertBanner>
+        {!authToken && isSignInPage ? (
+          <React.Suspense
+            fallback={<BusyLoaderWrapper height='100vh' isLoading />}
+          >
+            <Switch>
+              <Route path={PathEnum.Sign_In} exact>
+                <SignIn />
+              </Route>
+            </Switch>
+          </React.Suspense>
+        ) : (
+          <>
+            {projectsData?.project?.warn_index && (
+              <AlertBanner type='warning'>
+                Index db was corrupted and deleted. Please run
+                <b>`aim storage reindex`</b> command to restore optimal
+                performance.
+              </AlertBanner>
+            )}
+            {projectsData?.project?.warn_runs && (
+              <AlertBanner type='warning'>
+                Corrupted runs were detected. Please run
+                <b>`aim runs rm --corrupted`</b> command to remove corrupted
+                runs.
+              </AlertBanner>
+            )}
+            <div className='pageContainer'>
+              <ErrorBoundary>
+                <SideBar />
+              </ErrorBoundary>
+              <div className='mainContainer'>
+                <React.Suspense
+                  fallback={<BusyLoaderWrapper height='100vh' isLoading />}
+                >
+                  <Switch>
+                    {Object.values(routes).map((route, index) => {
+                      const {
+                        component: Component,
+                        path,
+                        isExact,
+                        title,
+                      } = route;
+                      return (
+                        <Route path={path} key={index} exact={isExact}>
+                          <ErrorBoundary>
+                            <PageWrapper path={path} title={title}>
+                              <Component />
+                            </PageWrapper>
+                          </ErrorBoundary>
+                        </Route>
+                      );
+                    })}
+                    <Redirect to='/' />
+                  </Switch>
+                </React.Suspense>
+              </div>
+            </div>
+          </>
         )}
-        {projectsData?.project?.warn_runs && (
-          <AlertBanner type='warning'>
-            Corrupted runs were detected. Please run
-            <b>`aim runs rm --corrupted`</b> command to remove corrupted runs.
-          </AlertBanner>
-        )}
-        <div className='pageContainer'>
-          <ErrorBoundary>
-            <SideBar />
-          </ErrorBoundary>
-          <div className='mainContainer'>
-            <React.Suspense
-              fallback={<BusyLoaderWrapper height='100vh' isLoading />}
-            >
-              <Switch>
-                {Object.values(routes).map((route, index) => {
-                  const { component: Component, path, isExact, title } = route;
-                  return (
-                    <Route path={path} key={index} exact={isExact}>
-                      <ErrorBoundary>
-                        <PageWrapper path={path} title={title}>
-                          <Component />
-                        </PageWrapper>
-                      </ErrorBoundary>
-                    </Route>
-                  );
-                })}
-                <Redirect to='/' />
-              </Switch>
-            </React.Suspense>
-          </div>
-        </div>
       </Theme>
     </BrowserRouter>
   );

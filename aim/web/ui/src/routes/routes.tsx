@@ -57,6 +57,10 @@ const TextExplorer = React.lazy(
   () => import(/* webpackChunkName: "text" */ 'pages/TextExplorer'),
 );
 
+const SignIn = React.lazy(
+  () => import(/* webpackChunkName: "signin" */ 'pages/SignIn/SignIn'),
+);
+
 const Reports = React.lazy(
   () => import(/* webpackChunkName: "Reports" */ 'pages/Reports'),
 );
@@ -258,6 +262,15 @@ const routes: { [key: string]: any } = {
     displayName: 'Report',
     isExact: true,
     title: pageTitlesEnum.REPORT,
+  },
+  SIGN_IN: {
+    path: PathEnum.Sign_In,
+    component: SignIn,
+    showInSidebar: false,
+    displayName: 'Sign In',
+    isExact: true,
+    title: 'Sign In',
+    isPublic: true,
   },
 };
 

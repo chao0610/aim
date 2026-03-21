@@ -1,0 +1,80 @@
+.SignIn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  background: #f5f5f5;
+
+  &__card {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 380px;
+  }
+
+  &__title {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1c2852;
+  }
+
+  &__field {
+    margin-bottom: 1rem;
+
+    label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #484f62;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+      box-sizing: border-box;
+
+      &:focus {
+        outline: none;
+        border-color: #1c2852;
+        box-shadow: 0 0 0 2px rgba(28, 40, 82, 0.1);
+      }
+    }
+  }
+
+  &__error {
+    color: #dc2626;
+    font-size: 0.8125rem;
+    margin: 0.5rem 0;
+  }
+
+  &__button {
+    width: 100%;
+    padding: 0.625rem;
+    background: #1c2852;
+    color: white;
+    border: none;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 0.5rem;
+
+    &:hover {
+      background: #2a3a6e;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+}

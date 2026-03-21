@@ -45,6 +45,7 @@ const ENDPOINTS = {
   },
   AUTH: {
     BASE: 'auth',
+    LOGIN: 'login',
     REFRESH: 'refresh',
   },
   BOARDS: {
