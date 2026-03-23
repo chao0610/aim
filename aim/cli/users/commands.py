@@ -1,15 +1,13 @@
 import click
 import bcrypt
 
-from aim.sdk.repo import Repo
 from aim.storage.structured.sql_engine.models import AimUser
 
 
 def _get_session():
-    import subprocess
-    from aim.cli.utils import build_db_upgrade_command
-    subprocess.run(build_db_upgrade_command(), check=True)
+    from aim.sdk import Repo
     repo = Repo.default_repo()
+    repo.structured_db.run_upgrades()
     return repo.structured_db.get_session()
 
 
