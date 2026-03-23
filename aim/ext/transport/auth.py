@@ -38,7 +38,8 @@ def resolve_user_id_from_request(request: Request) -> int | None:
 
     secret_key = os.environ.get(AIM_SECRET_KEY)
     if not secret_key:
-        return None
+        # AIM_SECRET_KEY is enforced at startup; this is a safety fallback
+        raise HTTPException(status_code=500, detail='Server misconfigured: AIM_SECRET_KEY not set')
 
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):

@@ -24,7 +24,10 @@ from aim.web.api.runs.utils import (
     get_run_or_404,
     numpy_to_encodable,
 )
-from fastapi import Header, HTTPException
+from aim.storage.structured.sql_engine.models import AimUser
+from aim.web.api.auth.deps import get_current_user
+from aim.web.api.ownership import check_run_visibility, get_visible_run_hashes
+from fastapi import Depends, Header, HTTPException
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
@@ -62,8 +65,10 @@ class CustomObjectApiConfig:
             index_density: Optional[int] = 5,
             report_progress: Optional[bool] = True,
             x_timezone_offset: int = Header(default=0),
+            current_user: AimUser = Depends(get_current_user),
         ):
             # search Sequence API
+            visible_hashes = get_visible_run_hashes(current_user)
             repo = get_project_repo()
             query = checked_query(q)
             record_range = checked_range(record_range)
@@ -84,6 +89,7 @@ class CustomObjectApiConfig:
             api = CustomObjectApi(seq_name, resolve_blobs=cls.resolve_blobs)
             api.set_dump_data_fn(cls.dump_record_fn)
             api.set_trace_collection(query_iterator)
+            api.set_visible_hashes(visible_hashes)
             api.set_ranges(record_range, record_density, index_range, index_density)
             streamer = api.search_result_streamer(skip_system, report_progress)
             return StreamingResponse(streamer)
@@ -99,8 +105,10 @@ class CustomObjectApiConfig:
             record_density: Optional[int] = 50,
             index_range: Optional[str] = '',
             index_density: Optional[int] = 5,
+            current_user: AimUser = Depends(get_current_user),
         ):
             # get Sequence batch API
+            check_run_visibility(run_id, current_user)
             record_range = checked_range(record_range)
             index_range = checked_range(index_range)
             CustomObjectApiConfig.check_density(record_density)
@@ -133,8 +141,10 @@ class CustomObjectApiConfig:
             index_range: Optional[str] = '',
             index_density: Optional[int] = 5,
             record_step: int = -1,
+            current_user: AimUser = Depends(get_current_user),
         ):
             # get last step by default
+            check_run_visibility(run_id, current_user)
 
             index_range = checked_range(index_range)
             CustomObjectApiConfig.check_density(index_density)

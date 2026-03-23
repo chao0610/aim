@@ -158,4 +158,36 @@
     font-size: 0.8125rem;
     margin-top: 0.5rem;
   }
+
+  &__success {
+    color: #166534;
+    font-size: 0.8125rem;
+    margin-top: 0.5rem;
+  }
+
+  &__field {
+    margin-bottom: 0.75rem;
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.25rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+
+      &:focus {
+        outline: none;
+        border-color: #1c2852;
+        box-shadow: 0 0 0 2px rgba(28, 40, 82, 0.1);
+      }
+    }
+  }
 }

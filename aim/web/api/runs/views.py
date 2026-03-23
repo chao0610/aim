@@ -44,7 +44,7 @@ from aim.web.api.runs.utils import (
     run_search_result_streamer,
 )
 from aim.web.api.auth.deps import get_current_user
-from aim.web.api.ownership import assert_owner
+from aim.web.api.ownership import assert_owner, check_run_visibility, get_visible_run_hashes
 from aim.web.api.utils import (
     APIRouter,  # wrapper for fastapi.APIRouter
     check_read_only,
@@ -73,11 +73,13 @@ async def run_search_api(
     exclude_params: Optional[bool] = False,
     exclude_traces: Optional[bool] = False,
     x_timezone_offset: int = Header(default=0),
+    current_user: AimUser = Depends(get_current_user),
 ):
     from aim.sdk.sequence_collection import QueryRunSequenceCollection
 
     repo = get_project_repo()
     query = checked_query(q)
+    visible_hashes = get_visible_run_hashes(current_user)
 
     repo._prepare_runs_cache()
     runs = QueryRunSequenceCollection(
@@ -89,15 +91,21 @@ async def run_search_api(
         timezone_offset=x_timezone_offset,
     )
 
-    streamer = run_search_result_streamer(runs, limit, skip_system, report_progress, exclude_params, exclude_traces)
+    streamer = run_search_result_streamer(
+        runs, limit, skip_system, report_progress, exclude_params, exclude_traces, visible_hashes
+    )
     return StreamingResponse(streamer)
 
 
 @runs_router.post('/search/metric/align/', response_model=RunMetricCustomAlignApiOut)
-async def run_metric_custom_align_api(request_data: MetricAlignApiIn):
+async def run_metric_custom_align_api(
+    request_data: MetricAlignApiIn,
+    current_user: AimUser = Depends(get_current_user),
+):
     repo = get_project_repo()
+    visible_hashes = get_visible_run_hashes(current_user)
     x_axis_metric_name = request_data.align_by
-    requested_runs = request_data.runs
+    requested_runs = [r for r in request_data.runs if r.run_id in visible_hashes]
 
     streamer = custom_aligned_metrics_streamer(requested_runs, x_axis_metric_name, repo)
     return StreamingResponse(streamer)
@@ -113,6 +121,7 @@ async def run_metric_search_api(
     skip_system: Optional[bool] = True,
     report_progress: Optional[bool] = True,
     x_timezone_offset: int = Header(default=0),
+    current_user: AimUser = Depends(get_current_user),
 ):
     from aim.sdk.sequence_collection import QuerySequenceCollection
     from aim.sdk.sequences.metric import Metric
@@ -124,6 +133,7 @@ async def run_metric_search_api(
 
     repo = get_project_repo()
     query = checked_query(q)
+    visible_hashes = get_visible_run_hashes(current_user)
 
     repo._prepare_runs_cache()
     traces = QuerySequenceCollection(
@@ -134,24 +144,32 @@ async def run_metric_search_api(
         timezone_offset=x_timezone_offset,
     )
 
-    streamer = metric_search_result_streamer(traces, skip_system, steps_num, x_axis, report_progress)
+    streamer = metric_search_result_streamer(traces, skip_system, steps_num, x_axis, report_progress, visible_hashes)
     return StreamingResponse(streamer)
 
 
 @runs_router.get('/active/', response_model=RunActiveOut)
-async def get_active_runs_api(report_progress: Optional[bool] = True):
+async def get_active_runs_api(
+    report_progress: Optional[bool] = True,
+    current_user: AimUser = Depends(get_current_user),
+):
     repo = get_project_repo()
     repo._prepare_runs_cache()
+    visible_hashes = get_visible_run_hashes(current_user)
 
-    streamer = run_active_result_streamer(repo)
+    streamer = run_active_result_streamer(repo, report_progress, visible_hashes)
 
     return StreamingResponse(streamer)
 
 
 @runs_router.get('/{run_id}/info/', response_model=RunInfoOut)
 async def run_params_api(
-    run_id: str, skip_system: Optional[bool] = False, sequence: Optional[Tuple[str, ...]] = Query(())
+    run_id: str,
+    skip_system: Optional[bool] = False,
+    sequence: Optional[Tuple[str, ...]] = Query(()),
+    current_user: AimUser = Depends(get_current_user),
 ):
+    check_run_visibility(run_id, current_user)
     repo = get_project_repo()
     run = get_run_or_404(run_id, repo=repo)
 
@@ -177,7 +195,10 @@ async def run_params_api(
 
 
 @runs_router.post('/{run_id}/metric/get-batch/', response_model=RunMetricsBatchApiOut)
-async def run_metric_batch_api(run_id: str, requested_traces: RunTracesBatchApiIn):
+async def run_metric_batch_api(
+    run_id: str, requested_traces: RunTracesBatchApiIn, current_user: AimUser = Depends(get_current_user)
+):
+    check_run_visibility(run_id, current_user)
     run = get_run_or_404(run_id)
     traces_data = collect_requested_metric_traces(run, requested_traces)
 
@@ -316,7 +337,8 @@ async def archive_runs_batch_api(
 
 
 @runs_router.get('/{run_id}/note/')
-def list_note_api(run_id, factory=Depends(object_factory)):
+def list_note_api(run_id, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)):
+    check_run_visibility(run_id, current_user)
     with factory:
         run = factory.find_run(run_id)
         if not run:
@@ -348,7 +370,8 @@ def create_note_api(run_id, note_in: NoteIn, factory=Depends(object_factory), cu
 
 
 @runs_router.get('/{run_id}/note/{_id}')
-def get_note_api(run_id, _id: int, factory=Depends(object_factory)):
+def get_note_api(run_id, _id: int, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)):
+    check_run_visibility(run_id, current_user)
     with factory:
         run = factory.find_run(run_id)
         if not run:
@@ -411,7 +434,8 @@ def delete_note_api(run_id, _id: int, factory=Depends(object_factory), current_u
 
 
 @runs_router.get('/{run_id}/logs/')
-async def get_logs_api(run_id: str, record_range: Optional[str] = ''):
+async def get_logs_api(run_id: str, record_range: Optional[str] = '', current_user: AimUser = Depends(get_current_user)):
+    check_run_visibility(run_id, current_user)
     repo = get_project_repo()
     run = get_run_or_404(run_id, repo=repo)
 
@@ -419,7 +443,10 @@ async def get_logs_api(run_id: str, record_range: Optional[str] = ''):
 
 
 @runs_router.get('/{run_id}/log-records/')
-async def get_log_records_api(run_id: str, record_range: Optional[str] = ''):
+async def get_log_records_api(
+    run_id: str, record_range: Optional[str] = '', current_user: AimUser = Depends(get_current_user)
+):
+    check_run_visibility(run_id, current_user)
     repo = get_project_repo()
     run = get_run_or_404(run_id, repo=repo)
 

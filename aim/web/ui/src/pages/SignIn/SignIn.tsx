@@ -37,8 +37,8 @@ function SignIn(): React.FunctionComponentElement<React.ReactNode> {
       const data = await response.json();
       localStorage.setItem('Auth', `${data.token_type} ${data.access_token}`);
 
-      // Store refresh token in cookie
-      document.cookie = `token=${data.refresh_token}; path=/`;
+      // Store refresh token in localStorage (not cookie — per design spec)
+      localStorage.setItem('token', data.refresh_token);
 
       window.location.assign(getBasePath() || '/');
     } catch (err) {
@@ -75,11 +75,7 @@ function SignIn(): React.FunctionComponentElement<React.ReactNode> {
             />
           </div>
           {error && <p className='SignIn__error'>{error}</p>}
-          <button
-            type='submit'
-            className='SignIn__button'
-            disabled={loading}
-          >
+          <button type='submit' className='SignIn__button' disabled={loading}>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>

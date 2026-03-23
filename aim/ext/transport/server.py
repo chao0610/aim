@@ -1,5 +1,13 @@
 import os
 
+from aim.web.configs import AIM_SECRET_KEY
+
+if not os.environ.get(AIM_SECRET_KEY):
+    raise RuntimeError(
+        'AIM_SECRET_KEY environment variable is required. '
+        'Set it before starting: export AIM_SECRET_KEY=your-secret-key'
+    )
+
 from aim.ext.transport.config import AIM_SERVER_BASE_PATH
 from aim.ext.transport.handlers import (
     get_file_manager,

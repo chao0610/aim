@@ -1,6 +1,4 @@
-import Cookies from 'js-cookie';
-
-import { getAPIHost, getAPIAuthToken } from 'config/config';
+import { getAPIHost, getAPIAuthToken, getBasePath } from 'config/config';
 
 import ENDPOINTS from './endpoints';
 
@@ -290,15 +288,15 @@ function setAuthToken({
  * @returns {void}
  */
 function setRefreshToken(refresh_token: string): void {
-  Cookies.set(AUTH_REFRESH_TOKEN_KEY, refresh_token);
+  localStorage.setItem(AUTH_REFRESH_TOKEN_KEY, refresh_token);
 }
 
 /**
- * removeRefreshToken - Removes the refresh token from cookies
+ * removeRefreshToken - Removes the refresh token from localStorage
  * @returns {void}
  */
 function removeRefreshToken(): void {
-  Cookies.remove(AUTH_REFRESH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_REFRESH_TOKEN_KEY);
 }
 
 /**
@@ -307,7 +305,7 @@ function removeRefreshToken(): void {
  * @throws Error
  */
 function refreshToken() {
-  const refresh_token = Cookies.get('token') || '';
+  const refresh_token = localStorage.getItem(AUTH_REFRESH_TOKEN_KEY) || '';
   return post<AuthToken>(
     `${ENDPOINTS.AUTH.BASE}/${ENDPOINTS.AUTH.REFRESH}`,
     { refresh_token },
@@ -346,7 +344,7 @@ async function checkCredentials<T>(
   if (response.status === 401) {
     if (endpoint === `${ENDPOINTS.AUTH.BASE}/${ENDPOINTS.AUTH.REFRESH}`) {
       removeAuthToken();
-      window.location.assign(`${window.location.origin}/sign-in`);
+      window.location.assign(`${getBasePath() || ''}/sign-in`);
       return parseResponse<T>(response);
     }
     if (localStorage.getItem('refreshing') !== 'true') {

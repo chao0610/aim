@@ -17,6 +17,14 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Change password state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+
   const authHeader = localStorage.getItem('Auth') || '';
 
   const fetchTokens = async () => {
@@ -76,6 +84,48 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
     }
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwError('');
+    setPwSuccess('');
+    if (newPassword.length < 8) {
+      setPwError('Password must be at least 8 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPwError('New passwords do not match');
+      return;
+    }
+    setPwLoading(true);
+    try {
+      const basePath = getBasePath();
+      const resp = await fetch(`${basePath}/api/settings/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: authHeader,
+        },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+      if (!resp.ok) {
+        const data = await resp.json();
+        setPwError(data.detail || 'Failed to change password');
+        return;
+      }
+      setPwSuccess('Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch {
+      setPwError('Failed to change password');
+    } finally {
+      setPwLoading(false);
+    }
+  };
+
   return (
     <div className='Settings'>
       <h1 className='Settings__title'>Settings</h1>
@@ -85,10 +135,10 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
 
         {createdToken && (
           <div className='Settings__token-reveal'>
-            <p>
-              Your new token (copy it now — it won&apos;t be shown again):
-            </p>
-            <code className='Settings__token-reveal__value'>{createdToken}</code>
+            <p>Your new token (copy it now — it won&apos;t be shown again):</p>
+            <code className='Settings__token-reveal__value'>
+              {createdToken}
+            </code>
             <button
               className='Settings__button Settings__button--secondary'
               onClick={() => navigator.clipboard.writeText(createdToken)}
@@ -156,6 +206,53 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
             </button>
           </div>
           {error && <p className='Settings__error'>{error}</p>}
+        </form>
+      </section>
+
+      <section className='Settings__section'>
+        <h2 className='Settings__section__title'>Change Password</h2>
+        <form className='Settings__create-form' onSubmit={handleChangePassword}>
+          <div className='Settings__field'>
+            <label htmlFor='currentPassword'>Current Password</label>
+            <input
+              id='currentPassword'
+              type='password'
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+            />
+          </div>
+          <div className='Settings__field'>
+            <label htmlFor='newPassword'>New Password</label>
+            <input
+              id='newPassword'
+              type='password'
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              minLength={8}
+            />
+          </div>
+          <div className='Settings__field'>
+            <label htmlFor='confirmPassword'>Confirm New Password</label>
+            <input
+              id='confirmPassword'
+              type='password'
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={8}
+            />
+          </div>
+          {pwError && <p className='Settings__error'>{pwError}</p>}
+          {pwSuccess && <p className='Settings__success'>{pwSuccess}</p>}
+          <button
+            type='submit'
+            className='Settings__button'
+            disabled={pwLoading}
+          >
+            {pwLoading ? 'Changing...' : 'Change Password'}
+          </button>
         </form>
       </section>
     </div>

@@ -45,6 +45,7 @@ class CustomObjectApi:
         self.requested_traces: list = []
         self.run: Run = None
         self.trace_cache: dict = {}
+        self.visible_hashes: Optional[set] = None
 
         self.record_range = None
         self.record_density = None
@@ -64,6 +65,9 @@ class CustomObjectApi:
 
     def set_trace_collection(self, traces: SequenceCollection):
         self.traces = traces
+
+    def set_visible_hashes(self, visible_hashes: Optional[set]):
+        self.visible_hashes = visible_hashes
 
     def set_requested_traces(self, run: 'Run', requested_traces):
         self.run = run
@@ -255,6 +259,8 @@ class CustomObjectApi:
                 if not run_trace_collection:
                     continue
                 run = run_trace_collection.run
+                if self.visible_hashes is not None and run.hash not in self.visible_hashes:
+                    continue
                 self.trace_cache[run.hash] = {'progress': progress}
                 run_traces = []
                 for trace in run_trace_collection.iter():

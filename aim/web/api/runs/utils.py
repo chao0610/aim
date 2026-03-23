@@ -197,6 +197,7 @@ async def metric_search_result_streamer(
     steps_num: int,
     x_axis: Optional[str] = None,
     report_progress: Optional[bool] = True,
+    visible_hashes: Optional[set] = None,
 ) -> bytes:
     try:
         last_reported_progress_time = time.time()
@@ -210,6 +211,10 @@ async def metric_search_result_streamer(
                 )
                 progress_reports_sent += 1
                 last_reported_progress_time = time.time()
+
+            # Skip runs not visible to the current user
+            if visible_hashes is not None and run_trace_collection.run.hash not in visible_hashes:
+                continue
 
             run = None
             traces_list = []
@@ -264,6 +269,7 @@ async def run_search_result_streamer(
     report_progress: Optional[bool] = True,
     exclude_params: Optional[bool] = False,
     exclude_traces: Optional[bool] = False,
+    visible_hashes: Optional[set] = None,
 ) -> bytes:
     try:
         run_count = 0
@@ -282,6 +288,8 @@ async def run_search_result_streamer(
             if not run_trace_collection:
                 continue
             run = run_trace_collection.run
+            if visible_hashes is not None and run.hash not in visible_hashes:
+                continue
             run_dict = {run.hash: {'props': get_run_props(run)}}
             if not exclude_params:
                 run_dict[run.hash]['params'] = get_run_params(run, skip_system=skip_system)
@@ -304,7 +312,9 @@ async def run_search_result_streamer(
         pass
 
 
-async def run_active_result_streamer(repo: 'Repo', report_progress: Optional[bool] = True):
+async def run_active_result_streamer(
+    repo: 'Repo', report_progress: Optional[bool] = True, visible_hashes: Optional[set] = None
+):
     try:
         active_run_hashes = repo.list_active_runs()
 
@@ -313,6 +323,9 @@ async def run_active_result_streamer(repo: 'Repo', report_progress: Optional[boo
 
         for run_hash in active_run_hashes:
             await asyncio.sleep(ASYNC_SLEEP_INTERVAL)
+
+            if visible_hashes is not None and run_hash not in visible_hashes:
+                continue
 
             run = Run(run_hash, repo=repo, read_only=True)
             if run.active:

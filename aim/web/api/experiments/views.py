@@ -228,8 +228,25 @@ async def get_experiment_runs_api(
 # Note APIs
 
 
+def _check_experiment_visibility(factory, exp_id, current_user):
+    """Raise 404 if the experiment is not visible to the current user."""
+    session = factory.get_session()
+    model = session.query(ExperimentModel).filter(ExperimentModel.uuid == exp_id).first()
+    if model and model.user_id is not None and model.user_id != current_user.id and not model.is_public:
+        raise HTTPException(status_code=404)
+
+
+def _assert_experiment_owner(factory, exp_id, current_user):
+    """Raise 403 if the current user is not the experiment owner."""
+    session = factory.get_session()
+    model = session.query(ExperimentModel).filter(ExperimentModel.uuid == exp_id).first()
+    if model:
+        assert_owner(model, current_user)
+
+
 @experiment_router.get('/{exp_id}/note/')
 async def list_note_api(exp_id, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)):
+    _check_experiment_visibility(factory, exp_id, current_user)
     with factory:
         experiment = factory.find_experiment(exp_id)
         if not experiment:
@@ -244,6 +261,7 @@ async def list_note_api(exp_id, factory=Depends(object_factory), current_user: A
 async def create_note_api(
     exp_id, note_in: NoteIn, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
 ):
+    _assert_experiment_owner(factory, exp_id, current_user)
     with factory:
         experiment = factory.find_experiment(exp_id)
         if not experiment:
@@ -262,6 +280,7 @@ async def create_note_api(
 async def get_note_api(
     exp_id, _id: int, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
 ):
+    _check_experiment_visibility(factory, exp_id, current_user)
     with factory:
         experiment = factory.find_experiment(exp_id)
         if not experiment:
@@ -286,6 +305,7 @@ async def update_note_api(
     factory=Depends(object_factory),
     current_user: AimUser = Depends(get_current_user),
 ):
+    _assert_experiment_owner(factory, exp_id, current_user)
     with factory:
         experiment = factory.find_experiment(exp_id)
         if not experiment:
@@ -309,6 +329,7 @@ async def update_note_api(
 async def delete_note_api(
     exp_id, _id: int, factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)
 ):
+    _assert_experiment_owner(factory, exp_id, current_user)
     with factory:
         experiment = factory.find_experiment(exp_id)
         if not experiment:
