@@ -6,6 +6,9 @@ from aim.storage.structured.sql_engine.models import AimUser
 
 
 def _get_session():
+    import subprocess
+    from aim.cli.utils import build_db_upgrade_command
+    subprocess.run(build_db_upgrade_command(), check=True)
     repo = Repo.default_repo()
     return repo.structured_db.get_session()
 
