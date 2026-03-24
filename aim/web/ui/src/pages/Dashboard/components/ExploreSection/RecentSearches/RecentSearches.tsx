@@ -2,6 +2,8 @@ import React from 'react';
 
 import { Text } from 'components/kit';
 
+import { useI18n } from 'services/i18n';
+
 import { getItem } from 'utils/storage';
 
 import RecentSearchItem from './RecentSearchItem';
@@ -9,6 +11,7 @@ import RecentSearchItem from './RecentSearchItem';
 import './RecentSearches.scss';
 
 function RecentSearches(): React.FunctionComponentElement<React.ReactNode> | null {
+  const { t } = useI18n();
   const [recentSearches, setRecentSearches] = React.useState<
     { explorer: string; query: string }[]
   >([]);
@@ -28,7 +31,7 @@ function RecentSearches(): React.FunctionComponentElement<React.ReactNode> | nul
         tint={100}
         weight={700}
       >
-        Recent Searches
+        {t('dashboard.recentSearches')}
       </Text>
       <div>
         {recentSearches.map((item, index) => (

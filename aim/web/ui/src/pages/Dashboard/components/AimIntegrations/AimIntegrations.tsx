@@ -12,9 +12,12 @@ import CodeBlock from 'components/CodeBlock/CodeBlock';
 
 import { DOCUMENTATIONS } from 'config/references';
 
+import { useI18n } from 'services/i18n';
+
 import './AimIntegrations.scss';
 
 function AimIntegrations() {
+  const { t } = useI18n();
   const [expanded, setExpanded] = React.useState<number | boolean>(0);
 
   const handleChange =
@@ -151,7 +154,7 @@ aim_logger.attach_output_handler(
   return (
     <div className='AimIntegrations'>
       <Text tint={100} weight={600} size={18}>
-        Integrate Aim with your favorite ML framework
+        {t('dashboard.integrateWithFramework')}
       </Text>
       <div className='AimIntegrations__section'>
         {integrations.map((item, i) => (
@@ -180,14 +183,14 @@ aim_logger.attach_output_handler(
                 tint={100}
                 className='AimIntegrations__section__text'
               >
-                See documentation{' '}
+                {t('dashboard.seeDocumentation')}{' '}
                 <Link
                   target='_blank'
                   href={item.docsLink}
                   rel='noreferrer'
                   className='QuickStart__section__text__link'
                 >
-                  here
+                  {t('dashboard.here')}
                 </Link>
                 .
               </Text>

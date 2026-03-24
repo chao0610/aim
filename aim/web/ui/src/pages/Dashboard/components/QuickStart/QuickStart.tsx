@@ -7,9 +7,12 @@ import CodeBlock from 'components/CodeBlock/CodeBlock';
 
 import { DOCUMENTATIONS } from 'config/references';
 
+import { useI18n } from 'services/i18n';
+
 import './QuickStart.scss';
 
 function QuickStart() {
+  const { t } = useI18n();
   return (
     <div className='QuickStart'>
       <Text
@@ -18,7 +21,7 @@ function QuickStart() {
         size={18}
         className='Dashboard__middle__title'
       >
-        Quick Start
+        {t('dashboard.quickStart')}
       </Text>
       <div className='QuickStart__section'>
         <Text
@@ -28,7 +31,7 @@ function QuickStart() {
           tint={100}
           className='QuickStart__section__title'
         >
-          Integrate Aim with your code
+          {t('dashboard.integrateCode')}
         </Text>
         <CodeBlock
           code={`from aim import Run
@@ -54,15 +57,14 @@ for i in range(10):
           tint={100}
           className='QuickStart__section__text'
         >
-          See the full list of supported trackable objects(e.g. images, text,
-          etc){' '}
+          {t('dashboard.seeFullList')}{' '}
           <Link
             target='_blank'
             href={DOCUMENTATIONS.SUPPORTED_TYPES}
             rel='noreferrer'
             className='QuickStart__section__text__link'
           >
-            here
+            {t('dashboard.here')}
           </Link>
           .
         </Text>

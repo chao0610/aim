@@ -283,7 +283,7 @@ const routes: { [key: string]: any } = {
   SETTINGS: {
     path: PathEnum.Settings,
     component: Settings,
-    showInSidebar: true,
+    showInSidebar: false,
     displayName: 'Settings',
     icon: 'settings',
     isExact: true,

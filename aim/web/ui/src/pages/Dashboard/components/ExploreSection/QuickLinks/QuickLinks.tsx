@@ -9,27 +9,30 @@ import ListItem from 'components/kit/ListItem/ListItem';
 
 import { DATE_QUERY_FORMAT } from 'config/dates/dates';
 
+import { useI18n } from 'services/i18n';
+
 import { encode } from 'utils/encoder/encoder';
 
 import './QuickLinks.scss';
 
-const linkItems: { path: string; label: string }[] = [
-  {
-    path: 'active',
-    label: 'Active runs',
-  },
-  {
-    path: 'archived',
-    label: 'Archived runs',
-  },
-  {
-    path: 'latest',
-    label: "Last week's runs",
-  },
-];
-
 function QuickLinks(): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const history = useHistory();
+
+  const linkItems: { path: string; label: string }[] = [
+    {
+      path: 'active',
+      label: t('dashboard.activeRuns'),
+    },
+    {
+      path: 'archived',
+      label: t('dashboard.archivedRuns'),
+    },
+    {
+      path: 'latest',
+      label: t('dashboard.lastWeekRuns'),
+    },
+  ];
 
   const onClick: (
     e: React.MouseEvent<HTMLElement>,
@@ -76,7 +79,7 @@ function QuickLinks(): React.FunctionComponentElement<React.ReactNode> {
         tint={100}
         weight={700}
       >
-        Quick Navigation
+        {t('dashboard.quickNav')}
       </Text>
       <div className='QuickLinks__list'>
         {linkItems.map(({ label, path }) => (
@@ -93,7 +96,7 @@ function QuickLinks(): React.FunctionComponentElement<React.ReactNode> {
             >
               {label}
             </Text>
-            <Tooltip title='Explore in new tab'>
+            <Tooltip title={t('dashboard.exploreInNewTab')}>
               <div>
                 <Icon
                   fontSize={12}

@@ -6,6 +6,8 @@ import StatisticsBar from 'components/StatisticsBar';
 
 import routes from 'routes/routes';
 
+import { useI18n } from 'services/i18n';
+
 import { SequenceTypesEnum } from 'types/core/enums';
 
 import { encode } from 'utils/encoder/encoder';
@@ -14,96 +16,104 @@ import { IProjectStatistic, useProjectStatistics } from '.';
 
 import './ProjectStatistics.scss';
 
-const statisticsInitialMap: Record<string, IProjectStatistic> = {
-  [SequenceTypesEnum.Metric]: {
-    label: 'Metrics',
-    count: 0,
-    icon: 'metrics',
-    iconBgColor: '#7A4CE0',
-    navLink: routes.METRICS.path,
-  },
-  systemMetrics: {
-    label: 'Sys. metrics',
-    count: 0,
-    icon: 'metrics',
-    iconBgColor: '#AF4EAB',
-    navLink: `${routes.METRICS.path}?select=${encode({
-      advancedQuery: "metric.name.startswith('__system__') == True",
-      advancedMode: true,
-    })}`,
-  },
-  [SequenceTypesEnum.Figures]: {
-    label: 'Figures',
-    icon: 'figures',
-    count: 0,
-    iconBgColor: '#18AB6D',
-    navLink: routes.FIGURES_EXPLORER.path,
-  },
-  [SequenceTypesEnum.Images]: {
-    label: 'Images',
-    icon: 'images',
-    count: 0,
-    iconBgColor: '#F17922',
-    navLink: routes.IMAGE_EXPLORE.path,
-  },
-  [SequenceTypesEnum.Audios]: {
-    label: 'Audios',
-    icon: 'audios',
-    count: 0,
-    iconBgColor: '#FCB500',
-    navLink: routes.AUDIOS_EXPLORER.path,
-    badge: {
-      value: 'New',
-      style: { backgroundColor: '#1473e6', color: '#fff' },
-    },
-  },
-  [SequenceTypesEnum.Texts]: {
-    label: 'Texts',
-    icon: 'text',
-    count: 0,
-    iconBgColor: '#E149A0',
-    navLink: routes.TEXT_EXPLORER.path,
-    badge: {
-      value: 'New',
-      style: { backgroundColor: '#1473e6', color: '#fff' },
-    },
-  },
-  [SequenceTypesEnum.Distributions]: {
-    label: 'Distributions',
-    icon: 'distributions',
-    count: 0,
-    iconBgColor: '#0394B4',
-    navLink: '',
-    badge: {
-      value: 'Explorer coming soon',
-    },
-  },
-};
-
-const runsCountingInitialMap: Record<'archived' | 'runs', IProjectStatistic> = {
-  runs: {
-    label: 'runs',
-    icon: 'runs',
-    count: 0,
-    iconBgColor: '#1473E6',
-    navLink: routes.RUNS.path,
-  },
-  archived: {
-    label: 'archived',
-    icon: 'archive',
-    count: 0,
-    iconBgColor: '#606986',
-    navLink: `/runs?select=${encode({ query: 'run.archived == True' })}`,
-  },
-};
-
 function ProjectStatistics() {
+  const { t } = useI18n();
   const [hoveredState, setHoveredState] = React.useState({
     source: '',
     id: '',
   });
   const { projectParamsStore, projectContributionsStore } =
     useProjectStatistics();
+
+  const statisticsInitialMap: Record<string, IProjectStatistic> = React.useMemo(
+    () => ({
+      [SequenceTypesEnum.Metric]: {
+        label: t('sidebar.metrics'),
+        count: 0,
+        icon: 'metrics',
+        iconBgColor: '#7A4CE0',
+        navLink: routes.METRICS.path,
+      },
+      systemMetrics: {
+        label: t('dashboard.sysMetrics'),
+        count: 0,
+        icon: 'metrics',
+        iconBgColor: '#AF4EAB',
+        navLink: `${routes.METRICS.path}?select=${encode({
+          advancedQuery: "metric.name.startswith('__system__') == True",
+          advancedMode: true,
+        })}`,
+      },
+      [SequenceTypesEnum.Figures]: {
+        label: t('sidebar.figures'),
+        icon: 'figures',
+        count: 0,
+        iconBgColor: '#18AB6D',
+        navLink: routes.FIGURES_EXPLORER.path,
+      },
+      [SequenceTypesEnum.Images]: {
+        label: t('sidebar.images'),
+        icon: 'images',
+        count: 0,
+        iconBgColor: '#F17922',
+        navLink: routes.IMAGE_EXPLORE.path,
+      },
+      [SequenceTypesEnum.Audios]: {
+        label: t('sidebar.audios'),
+        icon: 'audios',
+        count: 0,
+        iconBgColor: '#FCB500',
+        navLink: routes.AUDIOS_EXPLORER.path,
+        badge: {
+          value: t('dashboard.new'),
+          style: { backgroundColor: '#1473e6', color: '#fff' },
+        },
+      },
+      [SequenceTypesEnum.Texts]: {
+        label: t('sidebar.text'),
+        icon: 'text',
+        count: 0,
+        iconBgColor: '#E149A0',
+        navLink: routes.TEXT_EXPLORER.path,
+        badge: {
+          value: t('dashboard.new'),
+          style: { backgroundColor: '#1473e6', color: '#fff' },
+        },
+      },
+      [SequenceTypesEnum.Distributions]: {
+        label: t('dashboard.distributions'),
+        icon: 'distributions',
+        count: 0,
+        iconBgColor: '#0394B4',
+        navLink: '',
+        badge: {
+          value: t('dashboard.explorerComingSoon'),
+        },
+      },
+    }),
+    [t],
+  );
+
+  const runsCountingInitialMap: Record<'archived' | 'runs', IProjectStatistic> =
+    React.useMemo(
+      () => ({
+        runs: {
+          label: t('dashboard.runs'),
+          icon: 'runs',
+          count: 0,
+          iconBgColor: '#1473E6',
+          navLink: routes.RUNS.path,
+        },
+        archived: {
+          label: t('dashboard.archived'),
+          icon: 'archive',
+          count: 0,
+          iconBgColor: '#606986',
+          navLink: `/runs?select=${encode({ query: 'run.archived == True' })}`,
+        },
+      }),
+      [t],
+    );
 
   const { statisticsMap, totalTrackedSequencesCount } = React.useMemo(() => {
     const statistics = { ...statisticsInitialMap };
@@ -129,7 +139,7 @@ function ProjectStatistics() {
       }
     }
     return { statisticsMap: statistics, totalTrackedSequencesCount };
-  }, [projectParamsStore]);
+  }, [projectParamsStore, statisticsInitialMap]);
 
   const { totalRunsCount, archivedRuns } = React.useMemo(
     () => ({
@@ -181,7 +191,7 @@ function ProjectStatistics() {
         weight={700}
         size={14}
       >
-        Total runs: {totalRunsCount}
+        {t('dashboard.totalRuns')} {totalRunsCount}
       </Text>
       <div className='ProjectStatistics__cards'>
         {Object.values(runsCountingMap).map(
@@ -208,7 +218,7 @@ function ProjectStatistics() {
         weight={700}
         size={14}
       >
-        Tracked sequences
+        {t('dashboard.trackedSequences')}
       </Text>
       <div className='ProjectStatistics__cards'>
         {Object.values(statisticsMap).map(

@@ -8,6 +8,7 @@ import ErrorBoundary from 'components/ErrorBoundary/ErrorBoundary';
 import { IllustrationsEnum } from 'config/illustrationConfig/illustrationConfig';
 
 import tagsAppModel from 'services/models/tags/tagsAppModel';
+import { useI18n } from 'services/i18n';
 
 import { ITagProps, ITagsTableProps } from 'types/pages/tags/Tags';
 
@@ -21,12 +22,13 @@ function TagsTable({
   onUpdateModalToggle,
   onDeleteModalToggle,
 }: ITagsTableProps): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const [hoveredRowIndex, setHoveredRowIndex] = useState('');
   const tableColumns = [
     {
       dataKey: 'name',
       key: 'name',
-      title: 'Name & Color',
+      title: t('tags.nameAndColor'),
       width: 200,
       cellRenderer: function cellRenderer({ cellData }: any, i: any) {
         const { name, color } = cellData;
@@ -36,7 +38,7 @@ function TagsTable({
     {
       dataKey: 'runs',
       key: 'runs',
-      title: 'Runs',
+      title: t('tags.runs'),
       width: 150,
       cellRenderer: function cellRenderer({ cellData }: any, i: any) {
         return (
@@ -54,7 +56,7 @@ function TagsTable({
     {
       dataKey: 'comment',
       key: 'comment',
-      title: 'Comment',
+      title: t('tags.comment'),
       width: 0,
       flexGrow: 1,
       cellRenderer: function cellRenderer({ cellData, i }: any) {
@@ -143,7 +145,8 @@ function TagsTable({
         <div className='Tags__TagList__tagListBox__titleBox'>
           {!isTagsDataLoading && !_.isNil(tagsList) && (
             <Text component='h4' size={14} weight={600} tint={100}>
-              {tagsList.length} {tagsList.length > 1 ? 'Tags' : 'Tag'}
+              {tagsList.length}{' '}
+              {tagsList.length > 1 ? t('tags.tags') : t('tags.tag')}
             </Text>
           )}
         </div>

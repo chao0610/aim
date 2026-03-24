@@ -125,3 +125,11 @@ coverage_html_report/
 aim/storage/**/*.cpp
 
 .ruff_cache
+
+# Plan & deploy docs (generated per-instance)
+docs/plans/
+docs/deploy-nginx-sso.md
+
+# Local SQLite database & migration scripts
+*.sqlite
+aim/storage/migrations/

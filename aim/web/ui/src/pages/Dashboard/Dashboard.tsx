@@ -4,6 +4,8 @@ import classnames from 'classnames';
 import ErrorBoundary from 'components/ErrorBoundary/ErrorBoundary';
 import { Spinner, Text } from 'components/kit';
 
+import { useI18n } from 'services/i18n';
+
 import ProjectContributions from './components/ProjectContributions/ProjectContributions';
 import ExploreSection from './components/ExploreSection/ExploreSection';
 import DashboardRight from './components/DashboardRight/DashboardRight';
@@ -17,6 +19,7 @@ import AimIntegrations from './components/AimIntegrations';
 import './Dashboard.scss';
 
 function Dashboard(): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const { projectContributionsStore } = useProjectContributions();
 
   const totalRunsCount = projectContributionsStore.data?.num_runs ?? 0;
@@ -44,7 +47,7 @@ function Dashboard(): React.FunctionComponentElement<React.ReactNode> {
                 size={18}
                 className='Dashboard__middle__title'
               >
-                Overview
+                {t('dashboard.overview')}
               </Text>
               <ProjectStatistics />
               {activeRunsCount ? <ActiveRunsTable /> : null}

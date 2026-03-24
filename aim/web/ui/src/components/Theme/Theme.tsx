@@ -8,28 +8,36 @@ import {
 } from '@material-ui/core';
 
 import { IThemeProps } from 'types/components/Theme/Theme';
-// import useFontSize from 'hooks/fontSize/useFontSize';
 
 export const ThemeContext = React.createContext({});
 const { Provider } = ThemeContext;
 
 const light: ThemeOptions = {
   typography: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily:
+      "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Helvetica Neue', Arial, sans-serif",
   },
   overrides: {
     MuiDivider: {
       root: {
-        backgroundColor: '#E8F1FC',
+        backgroundColor: '#E5E5EA',
       },
     },
     MuiButton: {
       root: {
         height: 32,
         boxShadow: 'unset',
+        borderRadius: 8,
+        textTransform: 'none',
       },
       contained: {
         boxShadow: 'unset',
+      },
+    },
+    MuiTooltip: {
+      tooltip: {
+        borderRadius: 8,
+        fontSize: '0.8125rem',
       },
     },
   },
@@ -41,13 +49,17 @@ const light: ThemeOptions = {
   palette: {
     type: 'light',
     primary: {
-      main: '#1473E6',
+      main: '#007AFF',
     },
     secondary: {
-      main: '#1c2852',
+      main: '#1D1D1F',
     },
     text: {
-      primary: '#414B6D',
+      primary: '#1D1D1F',
+    },
+    background: {
+      default: '#FFFFFF',
+      paper: '#FFFFFF',
     },
   },
   spacing: (factor: number) => `${factor}em`,
@@ -57,10 +69,7 @@ const darkTheme: ThemeOptions = {
   palette: {
     type: 'dark',
     primary: {
-      main: '#64b5f6',
-    },
-    text: {
-      // secondary: '#000',
+      main: '#0A84FF',
     },
   },
 };
@@ -69,11 +78,6 @@ function Theme(
   props: IThemeProps,
 ): React.FunctionComponentElement<React.ReactNode> {
   const [dark, setDark] = React.useState<boolean>(false);
-  // const fontSize = useFontSize();
-  //
-  // React.useEffect(() => {
-  //   document.getElementsByTagName('html')[0].style.fontSize = fontSize + 'px';
-  // }, [fontSize]);
 
   const handleTheme = React.useCallback((): void => {
     setDark(!dark);
@@ -82,7 +86,6 @@ function Theme(
   const theme = createMuiTheme(dark ? darkTheme : light);
   return (
     <Provider value={{ dark, handleTheme }}>
-      {/* <CssBaseline /> */}
       <ThemeProvider theme={theme}>
         <StylesProvider injectFirst={true}>{props.children}</StylesProvider>
       </ThemeProvider>

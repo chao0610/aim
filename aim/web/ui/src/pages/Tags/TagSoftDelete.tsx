@@ -5,6 +5,7 @@ import { Icon } from 'components/kit';
 import ErrorBoundary from 'components/ErrorBoundary/ErrorBoundary';
 
 import tagsAppModel from 'services/models/tags/tagsAppModel';
+import { useI18n } from 'services/i18n';
 
 import { ITagSoftDeleteProps } from 'types/pages/tags/Tags';
 
@@ -18,6 +19,7 @@ function TagSoftDelete({
   isTagDetailOverLayOpened,
   modalIsOpen,
 }: ITagSoftDeleteProps): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const archivedRef = useRef({ archived: tagInfo?.archived });
 
   function onTagHide() {
@@ -42,9 +44,11 @@ function TagSoftDelete({
         open={modalIsOpen}
         onCancel={onSoftDeleteModalToggle}
         onSubmit={archivedRef.current?.archived ? onTagShow : onTagHide}
-        text={`Are you sure you want to ${
-          archivedRef.current?.archived ? 'bring back' : 'hide'
-        } this tag?`}
+        text={t('tags.confirmHide', {
+          action: archivedRef.current?.archived
+            ? t('tags.bringBack').toLowerCase()
+            : t('tags.hide').toLowerCase(),
+        })}
         icon={
           <Icon
             name={
@@ -54,8 +58,10 @@ function TagSoftDelete({
             }
           />
         }
-        title='Hide tag'
-        confirmBtnText={archivedRef.current?.archived ? 'Bring back' : 'Hide'}
+        title={t('tags.hideTag')}
+        confirmBtnText={
+          archivedRef.current?.archived ? t('tags.bringBack') : t('tags.hide')
+        }
       />
     </ErrorBoundary>
   );

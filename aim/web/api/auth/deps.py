@@ -1,6 +1,6 @@
 import hashlib
 
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 
 from aim.storage.structured.sql_engine.models import AimUser, ApiToken
 from aim.web.api.auth.jwt_utils import decode_token
@@ -52,3 +52,17 @@ async def get_current_user(request: Request) -> AimUser:
         raise HTTPException(status_code=401, detail='User not found')
 
     return user
+
+
+def require_editor(current_user: AimUser = Depends(get_current_user)):
+    """Dependency: user must have editor or admin role."""
+    if not current_user.can_write:
+        raise HTTPException(status_code=403, detail='Write access required (editor or admin role)')
+    return current_user
+
+
+def require_admin(current_user: AimUser = Depends(get_current_user)):
+    """Dependency: user must have admin role."""
+    if not current_user.can_admin:
+        raise HTTPException(status_code=403, detail='Admin access required')
+    return current_user

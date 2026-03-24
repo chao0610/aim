@@ -11,6 +11,8 @@ import ControlPopover from 'components/ControlPopover/ControlPopover';
 import pageTitlesEnum from 'config/pageTitles/pageTitles';
 import { DOCUMENTATIONS } from 'config/references';
 
+import { useI18n } from 'services/i18n';
+
 import 'pages/Metrics/components/MetricsBar/MetricsBar.scss';
 
 function RunsBar(props: {
@@ -19,6 +21,7 @@ function RunsBar(props: {
   onLiveUpdateConfigChange: () => void;
   disabled: boolean;
 }): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   return (
     <ErrorBoundary>
       <AppBar title={pageTitlesEnum.RUNS_EXPLORER} disabled={props.disabled}>
@@ -26,7 +29,7 @@ function RunsBar(props: {
         <div className='MetricsBar__menu'>
           <ErrorBoundary>
             <ControlPopover
-              title='Menu'
+              title={t('runs.menu')}
               anchor={({ onAnchorClick }) => (
                 <Button
                   withOnlyIcon
@@ -48,7 +51,7 @@ function RunsBar(props: {
                     target='_blank'
                     rel='noreferrer'
                   >
-                    <MenuItem>Explorer Documentation</MenuItem>
+                    <MenuItem>{t('runs.explorerDocs')}</MenuItem>
                   </a>
                 </div>
               }

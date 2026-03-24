@@ -6,6 +6,7 @@ import { Button, Text } from 'components/kit';
 
 import CompareSelectedRunsPopover from 'pages/Metrics/components/Table/CompareSelectedRunsPopover';
 
+import { useI18n } from 'services/i18n';
 import { AppNameEnum } from 'services/models/explorer';
 
 import useTagsCard from './useTagsCard';
@@ -13,6 +14,7 @@ import useTagsCard from './useTagsCard';
 import './TagsCard.scss';
 
 function TagsCard(): React.FunctionComponentElement<React.ReactNode> | null {
+  const { t } = useI18n();
   const {
     tableRef,
     tableColumns,
@@ -31,7 +33,8 @@ function TagsCard(): React.FunctionComponentElement<React.ReactNode> | null {
         weight={700}
         tint={100}
       >
-        Tags {tagsStore?.data?.length ? `(${tagsStore?.data?.length})` : ''}
+        {t('sidebar.tags')}{' '}
+        {tagsStore?.data?.length ? `(${tagsStore?.data?.length})` : ''}
       </Text>
       {tagsStore?.data?.length ? (
         <DataList
@@ -45,7 +48,7 @@ function TagsCard(): React.FunctionComponentElement<React.ReactNode> | null {
           disableMatchBar={true}
           illustrationConfig={{
             size: 'small',
-            title: 'No Results',
+            title: t('dashboard.noResults'),
             showImage: false,
           }}
           toolbarItems={[
@@ -60,7 +63,9 @@ function TagsCard(): React.FunctionComponentElement<React.ReactNode> | null {
       ) : null}
       <NavLink className='TagsCard__NavLink' to='/tags'>
         <Button fullWidth size='xSmall' variant='outlined'>
-          {tagsStore?.data?.length ? 'See all tags' : 'Create a new tag'}
+          {tagsStore?.data?.length
+            ? t('dashboard.seeAllTags')
+            : t('dashboard.createNewTag')}
         </Button>
       </NavLink>
     </div>

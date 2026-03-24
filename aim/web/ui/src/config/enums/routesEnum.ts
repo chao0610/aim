@@ -27,6 +27,7 @@ enum PathEnum {
   Sign_In = '/sign-in',
   Settings = '/settings',
   Admin_Users = '/admin/users',
+  SSO_Callback = '/sso/callback',
 }
 
 export { PathEnum };

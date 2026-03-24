@@ -2,6 +2,8 @@ import React from 'react';
 
 import { Spinner, Text } from 'components/kit';
 
+import { useI18n } from 'services/i18n';
+
 import ExperimentsCard from './ExperimentsCard';
 import DashboardBookmarks from './DashboardBookmarks/DashboardBookmarks';
 import QuickLinks from './QuickLinks/QuickLinks';
@@ -14,6 +16,7 @@ import bookmarksEngine from './DashboardBookmarks/DashboardBookmarksStore';
 import './ExploreSection.scss';
 
 function ExploreSection(): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const [loading, setLoading] = React.useState<boolean>(true);
   const { loading: tagsLoading } = React.useRef(
     createTagsEngine,
@@ -35,7 +38,7 @@ function ExploreSection(): React.FunctionComponentElement<React.ReactNode> {
   return (
     <aside className='ExploreSection'>
       <Text className='ExploreSection__title' tint={100} size={18} weight={600}>
-        Explore
+        {t('dashboard.explore')}
       </Text>
       <QuickLinks />
       <RecentSearches />

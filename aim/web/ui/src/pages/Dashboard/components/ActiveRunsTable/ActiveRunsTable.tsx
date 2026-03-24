@@ -8,6 +8,7 @@ import { RowHeightSize } from 'config/table/tableConfigs';
 
 import CompareSelectedRunsPopover from 'pages/Metrics/components/Table/CompareSelectedRunsPopover';
 
+import { useI18n } from 'services/i18n';
 import { AppNameEnum } from 'services/models/explorer';
 
 import useActiveRunsTable from './useActiveRunsTable';
@@ -15,6 +16,7 @@ import useActiveRunsTable from './useActiveRunsTable';
 import './ActiveRunsTable.scss';
 
 function ActiveRunsTable() {
+  const { t } = useI18n();
   const {
     tableRef,
     tableColumns,
@@ -35,7 +37,8 @@ function ActiveRunsTable() {
           weight={700}
           tint={100}
         >
-          Active runs {tableData.length > 0 ? `(${tableData.length})` : ''}
+          {t('dashboard.activeRuns')}{' '}
+          {tableData.length > 0 ? `(${tableData.length})` : ''}
         </Text>
         {tableData.length > 0 && (
           <div className='ActiveRunsTable__header__comparisonPopover'>
@@ -73,7 +76,7 @@ function ActiveRunsTable() {
             rowHeight={RowHeightSize.sm}
             illustrationConfig={{
               size: 'large',
-              title: 'No active runs',
+              title: t('dashboard.noActiveRuns'),
             }}
             selectedRows={selectedRows}
             onRowSelect={onRowSelect}

@@ -7,6 +7,7 @@ import { Badge, Button, Icon } from 'components/kit';
 import ErrorBoundary from 'components/ErrorBoundary/ErrorBoundary';
 
 import tagsAppModel from 'services/models/tags/tagsAppModel';
+import { useI18n } from 'services/i18n';
 
 import { ITagDetailProps } from 'types/pages/tags/Tags';
 
@@ -24,6 +25,8 @@ function TagDetail({
   isRunsDataLoading,
   tagRuns,
 }: ITagDetailProps): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
+
   useEffect(() => {
     const tagRequestRef = tagsAppModel.getTagById(id);
     const tagRunsRequestRef = tagsAppModel.getTagRuns(id);
@@ -81,7 +84,7 @@ function TagDetail({
           {!isEmpty(tagRuns) ? (
             <TagRunsTable runsList={tagRuns} />
           ) : (
-            <IllustrationBlock size='xLarge' title='No Runs' />
+            <IllustrationBlock size='xLarge' title={t('tags.noRuns')} />
           )}
         </BusyLoaderWrapper>
       </div>

@@ -163,16 +163,30 @@ class RunInfo(Base):
 class AimUser(Base):
     __tablename__ = 'aim_user'
 
+    ROLE_VIEWER = 'viewer'
+    ROLE_EDITOR = 'editor'
+    ROLE_ADMIN = 'admin'
+
     id = Column(Integer, autoincrement=True, primary_key=True)
     username = Column(Text, unique=True, nullable=False)
-    password_hash = Column(Text, nullable=False)
+    password_hash = Column(Text, nullable=False, default='')
     is_admin = Column(Boolean, default=False)
+    role = Column(Text, nullable=False, default=ROLE_EDITOR)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    def __init__(self, username, password_hash, is_admin=False):
+    def __init__(self, username, password_hash='', is_admin=False, role=None):
         self.username = username
         self.password_hash = password_hash
         self.is_admin = is_admin
+        self.role = role or (self.ROLE_ADMIN if is_admin else self.ROLE_EDITOR)
+
+    @property
+    def can_write(self):
+        return self.role in (self.ROLE_EDITOR, self.ROLE_ADMIN)
+
+    @property
+    def can_admin(self):
+        return self.role == self.ROLE_ADMIN or self.is_admin
 
 
 class ApiToken(Base):

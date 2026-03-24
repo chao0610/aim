@@ -6,6 +6,7 @@ import { Text } from 'components/kit';
 
 import CompareSelectedRunsPopover from 'pages/Metrics/components/Table/CompareSelectedRunsPopover';
 
+import { useI18n } from 'services/i18n';
 import { AppNameEnum } from 'services/models/explorer';
 
 import useExperimentsCard from './useExperimentsCard';
@@ -13,6 +14,7 @@ import useExperimentsCard from './useExperimentsCard';
 import './ExperimentsCard.scss';
 
 function ExperimentsCard(): React.FunctionComponentElement<React.ReactNode> | null {
+  const { t } = useI18n();
   const {
     tableRef,
     tableColumns,
@@ -30,7 +32,7 @@ function ExperimentsCard(): React.FunctionComponentElement<React.ReactNode> | nu
         weight={700}
         tint={100}
       >
-        Experiments ({experimentsStore.data.length})
+        {t('dashboard.experiments')} ({experimentsStore.data.length})
       </Text>
       <DataList
         tableRef={tableRef}
@@ -42,7 +44,7 @@ function ExperimentsCard(): React.FunctionComponentElement<React.ReactNode> | nu
         rowHeight={24}
         illustrationConfig={{
           size: 'small',
-          title: 'No Results',
+          title: t('dashboard.noResults'),
           showImage: false,
         }}
         toolbarItems={[

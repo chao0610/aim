@@ -7,12 +7,14 @@ import ErrorBoundary from 'components/ErrorBoundary/ErrorBoundary';
 import { ANALYTICS_EVENT_KEYS } from 'config/analytics/analyticsKeysMap';
 
 import { trackEvent } from 'services/analytics';
+import { useI18n } from 'services/i18n';
 
 import useProjectContributions from './useProjectContributions';
 
 import './ProjectContributions.scss';
 
 function ProjectContributions(): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const { projectContributionsStore } = useProjectContributions();
   function shiftDate(date: any, numDays: any) {
     const newDate = new Date(date);
@@ -24,7 +26,7 @@ function ProjectContributions(): React.FunctionComponentElement<React.ReactNode>
     <ErrorBoundary>
       <div className='ProjectContributions'>
         <Text component='h2' size={18} weight={600} tint={100}>
-          Contributions
+          {t('dashboard.contributions')}
         </Text>
         <div className='ProjectContributions__HeatMap'>
           <HeatMap

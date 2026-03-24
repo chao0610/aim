@@ -10,11 +10,14 @@ import { IDashboardData } from 'modules/core/api/dashboardsApi';
 
 import { BookmarkIconType } from 'pages/Bookmarks/components/BookmarkCard/BookmarkCard';
 
+import { useI18n } from 'services/i18n';
+
 import useDashboardBookmarks from './useDashboardBookmarks';
 
 import './DashboardBookmarks.scss';
 
 function DashboardBookmarks(): React.FunctionComponentElement<React.ReactNode> | null {
+  const { t } = useI18n();
   const { dashboardBookmarksStore, handleClick } = useDashboardBookmarks();
 
   return dashboardBookmarksStore.data?.length ? (
@@ -26,7 +29,7 @@ function DashboardBookmarks(): React.FunctionComponentElement<React.ReactNode> |
         tint={100}
         component='h3'
       >
-        Bookmarks{' '}
+        {t('sidebar.bookmarks')}{' '}
         {dashboardBookmarksStore.data.length
           ? `(${dashboardBookmarksStore.data.length})`
           : ''}
@@ -72,7 +75,7 @@ function DashboardBookmarks(): React.FunctionComponentElement<React.ReactNode> |
       {dashboardBookmarksStore.data.length > 5 ? (
         <NavLink className='DashboardBookmarks__NavLink' to='/bookmarks'>
           <Button fullWidth variant='outlined' size='xSmall'>
-            See all bookmarks
+            {t('dashboard.seeAllBookmarks')}
           </Button>
         </NavLink>
       ) : null}

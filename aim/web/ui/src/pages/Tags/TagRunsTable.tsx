@@ -11,6 +11,8 @@ import StatusLabel from 'components/StatusLabel';
 
 import { TABLE_DATE_FORMAT } from 'config/dates/dates';
 
+import { useI18n } from 'services/i18n';
+
 import { ITagRun } from 'types/pages/tags/Tags';
 
 import { processDurationTime } from 'utils/processDurationTime';
@@ -20,12 +22,13 @@ function TagRunsTable({
 }: {
   runsList: ITagRun[];
 }): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const tableRef = useRef<any>({});
   const tableColumns = [
     {
       dataKey: 'name',
       key: 'name',
-      title: 'Name',
+      title: t('tags.name'),
       width: 0,
       flexGrow: 1,
       cellRenderer: function cellRenderer({
@@ -35,7 +38,11 @@ function TagRunsTable({
       }) {
         return (
           <>
-            <Tooltip title={cellData.active ? 'In Progress' : 'Finished'}>
+            <Tooltip
+              title={
+                cellData.active ? t('tags.inProgress') : t('tags.finished')
+              }
+            >
               <div>
                 <StatusLabel
                   className='Table__status_indicator'
@@ -57,7 +64,7 @@ function TagRunsTable({
     {
       dataKey: 'date',
       key: 'date',
-      title: 'Date',
+      title: t('tags.date'),
       width: 200,
       cellRenderer: function cellRenderer({ cellData }: { cellData: string }) {
         return <p className='TagsTable__runCreatedDate'>{cellData}</p>;
@@ -66,7 +73,7 @@ function TagRunsTable({
     {
       dataKey: 'duration',
       key: 'duration',
-      title: 'Duration',
+      title: t('tags.duration'),
       width: 200,
       cellRenderer: function cellRenderer({ cellData }: { cellData: string }) {
         return <p className='TagsTable__runDuration'>{cellData}</p>;

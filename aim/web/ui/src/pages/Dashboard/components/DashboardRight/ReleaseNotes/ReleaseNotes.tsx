@@ -5,6 +5,8 @@ import ReleaseNoteItem from 'components/ReleaseNoteItem/ReleaseNoteItem';
 
 import { AIM_VERSION } from 'config/config';
 
+import { useI18n } from 'services/i18n';
+
 import GuideLinks from '../GuideDocs/GuideDocs';
 
 import useReleaseNotes from './useReleaseNotes';
@@ -12,6 +14,7 @@ import useReleaseNotes from './useReleaseNotes';
 import './ReleaseNotes.scss';
 
 function ReleaseNotes(): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const {
     changelogData,
     LatestReleaseData,
@@ -35,7 +38,7 @@ function ReleaseNotes(): React.FunctionComponentElement<React.ReactNode> {
                 Aim {LatestReleaseData?.tagName}
               </Text>
               {`v${AIM_VERSION}` === LatestReleaseData?.tagName ? null : (
-                <span>Latest</span>
+                <span>{t('dashboard.latest')}</span>
               )}
             </div>
             <div className='ReleaseNotes__latest__content'>
@@ -49,7 +52,7 @@ function ReleaseNotes(): React.FunctionComponentElement<React.ReactNode> {
               ))}
               <a href={LatestReleaseData?.url} target='_blank' rel='noreferrer'>
                 <Button fullWidth variant='outlined' size='xSmall'>
-                  Release notes
+                  {t('dashboard.releaseNotes')}
                 </Button>
               </a>
             </div>
@@ -63,7 +66,7 @@ function ReleaseNotes(): React.FunctionComponentElement<React.ReactNode> {
                 weight={700}
                 size={14}
               >
-                Changelog
+                {t('dashboard.changelog')}
               </Text>
               <div
                 ref={releaseNoteRef}
@@ -87,7 +90,9 @@ function ReleaseNotes(): React.FunctionComponentElement<React.ReactNode> {
                   }`}
                 >
                   <ReleaseNoteItem
-                    tagName={`${currentReleaseData!.tagName} [current]`}
+                    tagName={`${currentReleaseData!.tagName} [${t(
+                      'dashboard.current',
+                    )}]`}
                     info={currentReleaseData!.info}
                     href={currentReleaseData!.url}
                   />

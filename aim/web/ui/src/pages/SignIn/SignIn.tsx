@@ -3,10 +3,12 @@ import React, { useState } from 'react';
 import { getBasePath } from 'config/config';
 
 import ENDPOINTS from 'services/api/endpoints';
+import { useI18n } from 'services/i18n';
 
 import './SignIn.scss';
 
 function SignIn(): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -29,20 +31,18 @@ function SignIn(): React.FunctionComponentElement<React.ReactNode> {
       );
 
       if (!response.ok) {
-        setError('Invalid username or password');
+        setError(t('signIn.error'));
         setLoading(false);
         return;
       }
 
       const data = await response.json();
       localStorage.setItem('Auth', `${data.token_type} ${data.access_token}`);
-
-      // Store refresh token in localStorage (not cookie — per design spec)
       localStorage.setItem('token', data.refresh_token);
 
       window.location.assign(getBasePath() || '/');
     } catch (err) {
-      setError('Login failed. Please try again.');
+      setError(t('signIn.failed'));
     } finally {
       setLoading(false);
     }
@@ -51,10 +51,10 @@ function SignIn(): React.FunctionComponentElement<React.ReactNode> {
   return (
     <div className='SignIn'>
       <div className='SignIn__card'>
-        <h2 className='SignIn__title'>Sign in to Aim</h2>
+        <h2 className='SignIn__title'>{t('signIn.title')}</h2>
         <form onSubmit={handleSubmit}>
           <div className='SignIn__field'>
-            <label htmlFor='username'>Username</label>
+            <label htmlFor='username'>{t('signIn.username')}</label>
             <input
               id='username'
               type='text'
@@ -65,7 +65,7 @@ function SignIn(): React.FunctionComponentElement<React.ReactNode> {
             />
           </div>
           <div className='SignIn__field'>
-            <label htmlFor='password'>Password</label>
+            <label htmlFor='password'>{t('signIn.password')}</label>
             <input
               id='password'
               type='password'
@@ -76,7 +76,7 @@ function SignIn(): React.FunctionComponentElement<React.ReactNode> {
           </div>
           {error && <p className='SignIn__error'>{error}</p>}
           <button type='submit' className='SignIn__button' disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? t('signIn.loading') : t('signIn.button')}
           </button>
         </form>
       </div>

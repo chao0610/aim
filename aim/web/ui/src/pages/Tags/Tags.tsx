@@ -9,6 +9,7 @@ import ErrorBoundary from 'components/ErrorBoundary/ErrorBoundary';
 import { ANALYTICS_EVENT_KEYS } from 'config/analytics/analyticsKeysMap';
 
 import * as analytics from 'services/analytics';
+import { useI18n } from 'services/i18n';
 
 import { ITagsProps } from 'types/pages/tags/Tags';
 
@@ -26,6 +27,7 @@ function Tags({
   isRunsDataLoading,
   isTagInfoDataLoading,
 }: ITagsProps): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const [value, setValue] = useState(0);
   const [archivedTagsList, setArchivedTagsList] = useState(
     tagsListData?.filter((tag) => tag.archived) || [],
@@ -55,8 +57,8 @@ function Tags({
             indicatorColor='primary'
             className='Tags__tabsContainer__tabs'
           >
-            <Tab label='Tags' />
-            <Tab label='Hidden Tags' />
+            <Tab label={t('tags.tags')} />
+            <Tab label={t('tags.hiddenTags')} />
           </Tabs>
         </Paper>
         <ErrorBoundary>

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 
 import { getBasePath } from 'config/config';
 
+import { useI18n } from 'services/i18n';
+
 import './Settings.scss';
 
 interface ApiToken {
@@ -11,13 +13,13 @@ interface ApiToken {
 }
 
 function Settings(): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [newTokenName, setNewTokenName] = useState('');
   const [createdToken, setCreatedToken] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Change password state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -59,7 +61,7 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
         body: JSON.stringify({ name: newTokenName.trim() }),
       });
       if (!resp.ok) {
-        setError('Failed to create token');
+        setError(t('settings.createFailed'));
         return;
       }
       const data = await resp.json();
@@ -67,7 +69,7 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
       setNewTokenName('');
       await fetchTokens();
     } catch {
-      setError('Failed to create token');
+      setError(t('settings.createFailed'));
     } finally {
       setLoading(false);
     }
@@ -89,11 +91,11 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
     setPwError('');
     setPwSuccess('');
     if (newPassword.length < 8) {
-      setPwError('Password must be at least 8 characters');
+      setPwError(t('settings.passwordMinLength'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPwError('New passwords do not match');
+      setPwError(t('settings.passwordMismatch'));
       return;
     }
     setPwLoading(true);
@@ -112,15 +114,15 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
       });
       if (!resp.ok) {
         const data = await resp.json();
-        setPwError(data.detail || 'Failed to change password');
+        setPwError(data.detail || t('settings.passwordFailed'));
         return;
       }
-      setPwSuccess('Password changed successfully');
+      setPwSuccess(t('settings.passwordChanged'));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch {
-      setPwError('Failed to change password');
+      setPwError(t('settings.passwordFailed'));
     } finally {
       setPwLoading(false);
     }
@@ -128,14 +130,14 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
 
   return (
     <div className='Settings'>
-      <h1 className='Settings__title'>Settings</h1>
+      <h1 className='Settings__title'>{t('settings.title')}</h1>
 
       <section className='Settings__section'>
-        <h2 className='Settings__section__title'>API Tokens</h2>
+        <h2 className='Settings__section__title'>{t('settings.apiTokens')}</h2>
 
         {createdToken && (
           <div className='Settings__token-reveal'>
-            <p>Your new token (copy it now — it won&apos;t be shown again):</p>
+            <p>{t('settings.tokenReveal')}</p>
             <code className='Settings__token-reveal__value'>
               {createdToken}
             </code>
@@ -143,13 +145,13 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
               className='Settings__button Settings__button--secondary'
               onClick={() => navigator.clipboard.writeText(createdToken)}
             >
-              Copy
+              {t('settings.copy')}
             </button>
             <button
               className='Settings__button Settings__button--ghost'
               onClick={() => setCreatedToken('')}
             >
-              Dismiss
+              {t('settings.dismiss')}
             </button>
           </div>
         )}
@@ -157,8 +159,8 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
         <table className='Settings__table'>
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Created</th>
+              <th>{t('settings.tokenName')}</th>
+              <th>{t('settings.tokenCreated')}</th>
               <th></th>
             </tr>
           </thead>
@@ -166,20 +168,20 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
             {tokens.length === 0 && (
               <tr>
                 <td colSpan={3} className='Settings__table__empty'>
-                  No API tokens yet.
+                  {t('settings.noTokens')}
                 </td>
               </tr>
             )}
-            {tokens.map((t) => (
-              <tr key={t.id}>
-                <td>{t.name}</td>
-                <td>{t.created_at}</td>
+            {tokens.map((tk) => (
+              <tr key={tk.id}>
+                <td>{tk.name}</td>
+                <td>{tk.created_at}</td>
                 <td>
                   <button
                     className='Settings__button Settings__button--danger'
-                    onClick={() => handleDelete(t.id)}
+                    onClick={() => handleDelete(tk.id)}
                   >
-                    Delete
+                    {t('settings.delete')}
                   </button>
                 </td>
               </tr>
@@ -188,11 +190,11 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
         </table>
 
         <form className='Settings__create-form' onSubmit={handleCreate}>
-          <h3>Create new token</h3>
+          <h3>{t('settings.createToken')}</h3>
           <div className='Settings__create-form__row'>
             <input
               type='text'
-              placeholder='Token name'
+              placeholder={t('settings.tokenPlaceholder')}
               value={newTokenName}
               onChange={(e) => setNewTokenName(e.target.value)}
               required
@@ -202,7 +204,7 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
               className='Settings__button'
               disabled={loading}
             >
-              {loading ? 'Creating...' : 'Create'}
+              {loading ? t('settings.creating') : t('settings.create')}
             </button>
           </div>
           {error && <p className='Settings__error'>{error}</p>}
@@ -210,10 +212,14 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
       </section>
 
       <section className='Settings__section'>
-        <h2 className='Settings__section__title'>Change Password</h2>
+        <h2 className='Settings__section__title'>
+          {t('settings.changePassword')}
+        </h2>
         <form className='Settings__create-form' onSubmit={handleChangePassword}>
           <div className='Settings__field'>
-            <label htmlFor='currentPassword'>Current Password</label>
+            <label htmlFor='currentPassword'>
+              {t('settings.currentPassword')}
+            </label>
             <input
               id='currentPassword'
               type='password'
@@ -223,7 +229,7 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
             />
           </div>
           <div className='Settings__field'>
-            <label htmlFor='newPassword'>New Password</label>
+            <label htmlFor='newPassword'>{t('settings.newPassword')}</label>
             <input
               id='newPassword'
               type='password'
@@ -234,7 +240,9 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
             />
           </div>
           <div className='Settings__field'>
-            <label htmlFor='confirmPassword'>Confirm New Password</label>
+            <label htmlFor='confirmPassword'>
+              {t('settings.confirmPassword')}
+            </label>
             <input
               id='confirmPassword'
               type='password'
@@ -251,7 +259,7 @@ function Settings(): React.FunctionComponentElement<React.ReactNode> {
             className='Settings__button'
             disabled={pwLoading}
           >
-            {pwLoading ? 'Changing...' : 'Change Password'}
+            {pwLoading ? t('settings.changing') : t('settings.changePassword')}
           </button>
         </form>
       </section>

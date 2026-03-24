@@ -2,11 +2,14 @@ import React from 'react';
 
 import { Text } from 'components/kit';
 
+import { useI18n } from 'services/i18n';
+
 import ReleaseNotes from './ReleaseNotes/ReleaseNotes';
 
 import './DashboardRight.scss';
 
 function DashboardRight(): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   return (
     <aside className='DashboardRight'>
       <Text
@@ -16,7 +19,7 @@ function DashboardRight(): React.FunctionComponentElement<React.ReactNode> {
         size={18}
         weight={600}
       >
-        What's New
+        {t('dashboard.whatsNew')}
       </Text>
       <ReleaseNotes />
     </aside>

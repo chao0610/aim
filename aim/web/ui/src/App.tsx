@@ -18,6 +18,7 @@ import PageWrapper from 'pages/PageWrapper';
 
 import routes from 'routes/routes';
 
+import { I18nProvider } from 'services/i18n';
 import projectsModel from 'services/models/projects/projectsModel';
 
 import { IProjectsModelState } from './types/services/models/projects/projectsModel';
@@ -27,6 +28,12 @@ import './App.scss';
 
 const SignIn = React.lazy(
   () => import(/* webpackChunkName: "signin" */ 'pages/SignIn/SignIn'),
+);
+const SSOCallback = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "sso-callback" */ 'pages/SSOCallback/SSOCallback'
+    ),
 );
 
 const basePath = getBasePath(false);
@@ -43,11 +50,16 @@ function App(): React.FunctionComponentElement<React.ReactNode> {
   const { loadPyodide } = usePyodide();
 
   const authToken = localStorage.getItem('Auth');
-  const isSignInPage = window.location.pathname.endsWith('/sign-in');
+  const pathname = window.location.pathname;
+  const isSignInPage = pathname.endsWith('/sign-in');
+  const isSSOCallback = pathname.endsWith('/sso/callback');
+  const isAuthPage = isSignInPage || isSSOCallback;
 
   React.useEffect(() => {
-    if (!authToken && !isSignInPage) {
-      window.location.assign(`${basePath}/sign-in`);
+    if (!authToken && !isAuthPage) {
+      // Redirect to Django SSO entry point for automatic login.
+      // Falls back to local sign-in if SSO is not available.
+      window.location.assign('/aim-sso/');
     }
   }, []);
 
@@ -69,70 +81,75 @@ function App(): React.FunctionComponentElement<React.ReactNode> {
   }, []);
 
   return (
-    <BrowserRouter basename={basePath}>
-      <ProjectWrapper />
-      <Theme>
-        {!authToken && isSignInPage ? (
-          <React.Suspense
-            fallback={<BusyLoaderWrapper height='100vh' isLoading />}
-          >
-            <Switch>
-              <Route path={PathEnum.Sign_In} exact>
-                <SignIn />
-              </Route>
-            </Switch>
-          </React.Suspense>
-        ) : (
-          <>
-            {projectsData?.project?.warn_index && (
-              <AlertBanner type='warning'>
-                Index db was corrupted and deleted. Please run
-                <b>`aim storage reindex`</b> command to restore optimal
-                performance.
-              </AlertBanner>
-            )}
-            {projectsData?.project?.warn_runs && (
-              <AlertBanner type='warning'>
-                Corrupted runs were detected. Please run
-                <b>`aim runs rm --corrupted`</b> command to remove corrupted
-                runs.
-              </AlertBanner>
-            )}
-            <div className='pageContainer'>
-              <ErrorBoundary>
-                <SideBar />
-              </ErrorBoundary>
-              <div className='mainContainer'>
-                <React.Suspense
-                  fallback={<BusyLoaderWrapper height='100vh' isLoading />}
-                >
-                  <Switch>
-                    {Object.values(routes).map((route, index) => {
-                      const {
-                        component: Component,
-                        path,
-                        isExact,
-                        title,
-                      } = route;
-                      return (
-                        <Route path={path} key={index} exact={isExact}>
-                          <ErrorBoundary>
-                            <PageWrapper path={path} title={title}>
-                              <Component />
-                            </PageWrapper>
-                          </ErrorBoundary>
-                        </Route>
-                      );
-                    })}
-                    <Redirect to='/' />
-                  </Switch>
-                </React.Suspense>
+    <I18nProvider>
+      <BrowserRouter basename={basePath}>
+        <Theme>
+          {!authToken && isAuthPage ? (
+            <React.Suspense
+              fallback={<BusyLoaderWrapper height='100vh' isLoading />}
+            >
+              <Switch>
+                <Route path={PathEnum.Sign_In} exact>
+                  <SignIn />
+                </Route>
+                <Route path={PathEnum.SSO_Callback} exact>
+                  <SSOCallback />
+                </Route>
+              </Switch>
+            </React.Suspense>
+          ) : (
+            <>
+              <ProjectWrapper />
+              {projectsData?.project?.warn_index && (
+                <AlertBanner type='warning'>
+                  Index db was corrupted and deleted. Please run
+                  <b>`aim storage reindex`</b> command to restore optimal
+                  performance.
+                </AlertBanner>
+              )}
+              {projectsData?.project?.warn_runs && (
+                <AlertBanner type='warning'>
+                  Corrupted runs were detected. Please run
+                  <b>`aim runs rm --corrupted`</b> command to remove corrupted
+                  runs.
+                </AlertBanner>
+              )}
+              <div className='pageContainer'>
+                <ErrorBoundary>
+                  <SideBar />
+                </ErrorBoundary>
+                <div className='mainContainer'>
+                  <React.Suspense
+                    fallback={<BusyLoaderWrapper height='100vh' isLoading />}
+                  >
+                    <Switch>
+                      {Object.values(routes).map((route, index) => {
+                        const {
+                          component: Component,
+                          path,
+                          isExact,
+                          title,
+                        } = route;
+                        return (
+                          <Route path={path} key={index} exact={isExact}>
+                            <ErrorBoundary>
+                              <PageWrapper path={path} title={title}>
+                                <Component />
+                              </PageWrapper>
+                            </ErrorBoundary>
+                          </Route>
+                        );
+                      })}
+                      <Redirect to='/' />
+                    </Switch>
+                  </React.Suspense>
+                </div>
               </div>
-            </div>
-          </>
-        )}
-      </Theme>
-    </BrowserRouter>
+            </>
+          )}
+        </Theme>
+      </BrowserRouter>
+    </I18nProvider>
   );
 }
 

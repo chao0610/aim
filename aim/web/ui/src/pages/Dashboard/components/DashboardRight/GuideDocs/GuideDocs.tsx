@@ -7,11 +7,14 @@ import ListItem from 'components/kit/ListItem/ListItem';
 
 import { DOCUMENTATIONS } from 'config/references';
 
+import { useI18n } from 'services/i18n';
+
 import guideStore from './GuidesStore';
 
 import './GuideDocs.scss';
 
 function GuideDocs(): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const { shuffle, guideLinks, shuffled } = guideStore();
 
   const onClick: (
@@ -46,7 +49,7 @@ function GuideDocs(): React.FunctionComponentElement<React.ReactNode> {
         weight={700}
         size={14}
       >
-        Guides
+        {t('dashboard.guides')}
       </Text>
       <div className='GuideLinks__content'>
         {guideLinks.map(
@@ -60,7 +63,7 @@ function GuideDocs(): React.FunctionComponentElement<React.ReactNode> {
               >
                 {link.name}
               </Text>
-              <Tooltip title='Explore in new tab'>
+              <Tooltip title={t('dashboard.exploreInNewTab')}>
                 <div>
                   <Icon
                     box
@@ -81,7 +84,7 @@ function GuideDocs(): React.FunctionComponentElement<React.ReactNode> {
         rel='noreferrer'
       >
         <Button fullWidth variant='outlined' size='xSmall'>
-          Docs
+          {t('dashboard.docs')}
         </Button>
       </a>
     </div>

@@ -5,17 +5,18 @@
   &__title {
     font-size: 1.5rem;
     font-weight: 600;
-    color: #1c2852;
+    color: #1D1D1F;
     margin-bottom: 2rem;
+    letter-spacing: -0.02em;
   }
 
   &__section {
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
 
     &__title {
       font-size: 1.125rem;
       font-weight: 600;
-      color: #1c2852;
+      color: #1D1D1F;
       margin-bottom: 1rem;
     }
   }
@@ -29,26 +30,26 @@
     th,
     td {
       text-align: left;
-      padding: 0.625rem 0.75rem;
-      border-bottom: 1px solid #e5e7eb;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #E5E5EA;
     }
 
     th {
       font-weight: 600;
-      color: #6b7280;
-      background: #f9fafb;
+      color: #8E8E93;
+      background: #F5F5F7;
     }
 
     &__empty {
-      color: #9ca3af;
+      color: #AEAEB2;
       font-style: italic;
     }
   }
 
   &__token-reveal {
-    background: #f0fdf4;
-    border: 1px solid #86efac;
-    border-radius: 0.375rem;
+    background: #F0FFF4;
+    border: 1px solid #86EFAC;
+    border-radius: 12px;
     padding: 1rem;
     margin-bottom: 1rem;
     display: flex;
@@ -66,10 +67,10 @@
     &__value {
       flex: 1;
       background: white;
-      border: 1px solid #d1d5db;
-      border-radius: 0.25rem;
-      padding: 0.375rem 0.625rem;
-      font-family: monospace;
+      border: 1px solid #D2D2D7;
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      font-family: 'SF Mono', 'Menlo', monospace;
       font-size: 0.8125rem;
       word-break: break-all;
     }
@@ -80,7 +81,7 @@
       font-size: 0.9375rem;
       font-weight: 600;
       margin-bottom: 0.75rem;
-      color: #374151;
+      color: #1D1D1F;
     }
 
     &__row {
@@ -90,103 +91,110 @@
 
       input {
         flex: 1;
-        padding: 0.5rem 0.75rem;
-        border: 1px solid #d1d5db;
-        border-radius: 0.25rem;
+        padding: 0.625rem 0.875rem;
+        border: 1px solid #D2D2D7;
+        border-radius: 10px;
         font-size: 0.875rem;
+        background: #FAFAFA;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
         &:focus {
           outline: none;
-          border-color: #1c2852;
-          box-shadow: 0 0 0 2px rgba(28, 40, 82, 0.1);
+          border-color: #007AFF;
+          box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12);
+          background: #fff;
         }
       }
     }
   }
 
   &__button {
-    padding: 0.5rem 1rem;
-    background: #1c2852;
+    padding: 0.5rem 1.25rem;
+    background: #007AFF;
     color: white;
     border: none;
-    border-radius: 0.25rem;
+    border-radius: 10px;
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
+    transition: background 0.2s ease;
 
     &:hover {
-      background: #2a3a6e;
+      background: #0066D6;
     }
 
     &:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
     }
 
     &--secondary {
-      background: #374151;
+      background: #636366;
 
       &:hover {
-        background: #4b5563;
+        background: #48484A;
       }
     }
 
     &--ghost {
       background: transparent;
-      color: #6b7280;
-      border: 1px solid #d1d5db;
+      color: #636366;
+      border: 1px solid #D2D2D7;
 
       &:hover {
-        background: #f3f4f6;
+        background: #F5F5F7;
       }
     }
 
     &--danger {
-      background: #dc2626;
-      padding: 0.25rem 0.625rem;
+      background: #FF3B30;
+      padding: 0.375rem 0.75rem;
       font-size: 0.8125rem;
 
       &:hover {
-        background: #b91c1c;
+        background: #D70015;
       }
     }
   }
 
   &__error {
-    color: #dc2626;
+    color: #FF3B30;
     font-size: 0.8125rem;
     margin-top: 0.5rem;
   }
 
   &__success {
-    color: #166534;
+    color: #34C759;
     font-size: 0.8125rem;
     margin-top: 0.5rem;
   }
 
   &__field {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.875rem;
 
     label {
       display: block;
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 500;
-      color: #374151;
-      margin-bottom: 0.25rem;
+      color: #6E6E73;
+      margin-bottom: 0.375rem;
     }
 
     input {
       width: 100%;
-      padding: 0.5rem 0.75rem;
-      border: 1px solid #d1d5db;
-      border-radius: 0.25rem;
+      padding: 0.625rem 0.875rem;
+      border: 1px solid #D2D2D7;
+      border-radius: 10px;
       font-size: 0.875rem;
+      background: #FAFAFA;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
       &:focus {
         outline: none;
-        border-color: #1c2852;
-        box-shadow: 0 0 0 2px rgba(28, 40, 82, 0.1);
+        border-color: #007AFF;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12);
+        background: #fff;
       }
     }
   }

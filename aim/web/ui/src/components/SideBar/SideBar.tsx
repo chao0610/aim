@@ -4,33 +4,58 @@ import { NavLink } from 'react-router-dom';
 import { Drawer, Tooltip } from '@material-ui/core';
 
 import logoImg from 'assets/logo.svg';
-import { ReactComponent as DiscordIcon } from 'assets/icons/discord.svg';
 
 import { Icon, Text } from 'components/kit';
 import { IconName } from 'components/kit/Icon';
 import ErrorBoundary from 'components/ErrorBoundary/ErrorBoundary';
-import CommunityPopup from 'components/CommunityPopup';
 
+import { AIM_VERSION, getBasePath } from 'config/config';
 import { PathEnum } from 'config/enums/routesEnum';
-import { AIM_VERSION } from 'config/config';
-import { ANALYTICS_EVENT_KEYS } from 'config/analytics/analyticsKeysMap';
 import { DOCUMENTATIONS } from 'config/references';
 
 import routes, { IRoute } from 'routes/routes';
 
-import { trackEvent } from 'services/analytics';
+import { useI18n } from 'services/i18n';
 
 import { getItem } from 'utils/storage';
 
 import './Sidebar.scss';
 
+const sidebarDisplayNameMap: Record<string, string> = {
+  Runs: 'sidebar.runs',
+  Metrics: 'sidebar.metrics',
+  Params: 'sidebar.params',
+  Text: 'sidebar.text',
+  Images: 'sidebar.images',
+  Figures: 'sidebar.figures',
+  Audios: 'sidebar.audios',
+  Scatters: 'sidebar.scatters',
+  Bookmarks: 'sidebar.bookmarks',
+  Tags: 'sidebar.tags',
+  Reports: 'sidebar.reports',
+};
+
 function SideBar(): React.FunctionComponentElement<React.ReactNode> {
+  const { t, locale, setLocale } = useI18n();
+
   function getPathFromStorage(route: PathEnum): PathEnum | string {
     const path = getItem(`${route.slice(1)}Url`) ?? '';
     if (path !== '' && path.startsWith(route)) {
       return path;
     }
     return route;
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('Auth');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('refreshing');
+    window.location.assign(`${getBasePath() || ''}/sign-in`);
+  }
+
+  function toggleLocale() {
+    setLocale(locale === 'zh' ? 'en' : 'zh');
   }
 
   return (
@@ -54,6 +79,8 @@ function SideBar(): React.FunctionComponentElement<React.ReactNode> {
             <div className='Sidebar__List__container ScrollBar__hidden'>
               {Object.values(routes).map((route: IRoute, index: number) => {
                 const { showInSidebar, path, displayName, icon } = route;
+                const i18nKey =
+                  displayName && sidebarDisplayNameMap[displayName];
                 return (
                   showInSidebar && (
                     <NavLink
@@ -73,7 +100,7 @@ function SideBar(): React.FunctionComponentElement<React.ReactNode> {
                           name={icon as IconName}
                         />
                         <span className='Sidebar__List__item--text'>
-                          {displayName}
+                          {i18nKey ? t(i18nKey) : displayName}
                         </span>
                       </li>
                     </NavLink>
@@ -83,40 +110,43 @@ function SideBar(): React.FunctionComponentElement<React.ReactNode> {
             </div>
           </ul>
           <div className='Sidebar__bottom'>
-            <Tooltip title='Settings' placement='right'>
+            <Tooltip title={t('sidebar.settings')} placement='right'>
               <NavLink
                 to={routes.SETTINGS.path}
                 className='Sidebar__bottom__anchor'
                 activeClassName='Sidebar__bottom__anchor--active'
               >
-                <Icon name='settings' fontSize={20} />
+                <Icon name='box-settings' fontSize={20} />
               </NavLink>
             </Tooltip>
-            <CommunityPopup>
-              <Tooltip title='Community Discord' placement='right'>
-                <a
-                  target='_blank'
-                  href='https://community.aimstack.io/'
-                  rel='noreferrer'
-                  className='Sidebar__bottom__anchor'
-                  onClick={() =>
-                    trackEvent(ANALYTICS_EVENT_KEYS.sidebar.discord)
-                  }
-                >
-                  <DiscordIcon />
-                </a>
-              </Tooltip>
-            </CommunityPopup>
-            <Tooltip title='Docs' placement='right'>
+            <Tooltip
+              title={locale === 'zh' ? 'English' : '中文'}
+              placement='right'
+            >
+              <button
+                className='Sidebar__bottom__anchor Sidebar__bottom__lang'
+                onClick={toggleLocale}
+              >
+                {locale === 'zh' ? 'EN' : '中'}
+              </button>
+            </Tooltip>
+            <Tooltip title={t('sidebar.docs')} placement='right'>
               <a
                 target='_blank'
                 href={DOCUMENTATIONS.MAIN_PAGE}
                 rel='noreferrer'
                 className='Sidebar__bottom__anchor'
-                onClick={() => trackEvent(ANALYTICS_EVENT_KEYS.sidebar.docs)}
               >
                 <Icon name='full-docs' />
               </a>
+            </Tooltip>
+            <Tooltip title={t('sidebar.logout')} placement='right'>
+              <button
+                className='Sidebar__bottom__anchor Sidebar__bottom__logout'
+                onClick={handleLogout}
+              >
+                <Icon name='back-right' fontSize={20} />
+              </button>
             </Tooltip>
             <Text tint={30}>v{AIM_VERSION}</Text>
           </div>

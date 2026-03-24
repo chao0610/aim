@@ -99,8 +99,8 @@ function getStream<ResponseDataType>(
       options?.method === 'POST'
         ? ''
         : params
-          ? '?' + new URLSearchParams(params).toString()
-          : ''
+        ? '?' + new URLSearchParams(params).toString()
+        : ''
     }`,
     {
       method: 'GET',
@@ -349,15 +349,21 @@ async function checkCredentials<T>(
     }
     if (localStorage.getItem('refreshing') !== 'true') {
       localStorage.setItem('refreshing', 'true');
-      // Refresh token
-      const token = await refreshToken().call();
-      if (token) {
-        setAuthToken(token);
+      try {
+        const token = await refreshToken().call();
+        if (token) {
+          setAuthToken(token);
+          localStorage.setItem('refreshing', 'false');
+          window.location.reload();
+          return refetch();
+        }
+      } catch (_) {
+        // refresh failed — fall through to redirect
+      } finally {
         localStorage.setItem('refreshing', 'false');
-        window.location.reload();
-        return refetch();
       }
-      localStorage.setItem('refreshing', 'false');
+      removeAuthToken();
+      window.location.assign(`${getBasePath() || ''}/sign-in`);
     }
   }
   return parseResponse<T>(response);

@@ -10,6 +10,7 @@ import { Icon, Text } from 'components/kit';
 import ErrorBoundary from 'components/ErrorBoundary/ErrorBoundary';
 
 import tagsAppModel from 'services/models/tags/tagsAppModel';
+import { useI18n } from 'services/i18n';
 
 import './Tags.scss';
 
@@ -21,13 +22,16 @@ function TagDelete({
   isTagDetailOverLayOpened,
   modalIsOpen,
 }: any): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const formik = useFormik({
     initialValues: { name: '' },
     onSubmit: noop,
     validationSchema: yup.object({
-      name: yup.string().test('name', 'Name does not match', function (name) {
-        return name === tagInfo.name;
-      }),
+      name: yup
+        .string()
+        .test('name', t('tags.nameDoesNotMatch'), function (name) {
+          return name === tagInfo.name;
+        }),
     }),
   });
   const {
@@ -73,11 +77,11 @@ function TagDelete({
         open={modalIsOpen}
         onCancel={onCancel}
         onSubmit={onTagHide}
-        text='Are you sure you want to delete this tag?'
+        text={t('tags.confirmDelete')}
         icon={<Icon name='delete' />}
-        title='Delete tag'
+        title={t('tags.deleteTag')}
         statusType='error'
-        confirmBtnText='Delete'
+        confirmBtnText={t('tags.deleteTag')}
       >
         <Text
           component='p'
@@ -85,10 +89,10 @@ function TagDelete({
           tint={100}
           className='TagDelete__contentContainer__contentBox__warningText'
         >
-          {`Please type "${tagInfo?.name}" to confirm:`}
+          {t('tags.typeToConfirm', { name: tagInfo?.name })}
         </Text>
         <TextField
-          label='Name'
+          label={t('tags.name')}
           value={name}
           id='name'
           variant='outlined'

@@ -10,6 +10,7 @@ import { ANALYTICS_EVENT_KEYS } from 'config/analytics/analyticsKeysMap';
 
 import runAppModel from 'services/models/runs/runsAppModel';
 import { trackEvent } from 'services/analytics';
+import { useI18n } from 'services/i18n';
 
 import exceptionHandler from 'utils/app/exceptionHandler';
 
@@ -22,6 +23,7 @@ function SearchBar({
   onSearchInputChange,
   isDisabled,
 }: any) {
+  const { t } = useI18n();
   const searchRunsRef = React.useRef<any>(null);
   const autocompleteRef: any = React.useRef<React.MutableRefObject<any>>(null);
   React.useEffect(() => {
@@ -84,7 +86,7 @@ function SearchBar({
             />
           }
         >
-          {isRunsDataLoading ? 'Cancel' : 'Search'}
+          {isRunsDataLoading ? t('runs.cancel') : t('runs.search')}
         </Button>
       </div>
     </ErrorBoundary>

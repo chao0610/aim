@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from aim.storage.structured.sql_engine.models import AimUser, ApiToken
 from aim.web.api.auth import deps as auth_deps
-from aim.web.api.auth.deps import get_current_user
+from aim.web.api.auth.deps import get_current_user, require_editor
 from aim.web.api.utils import APIRouter
 
 settings_router = APIRouter()
@@ -45,7 +45,7 @@ async def list_tokens(user: AimUser = Depends(get_current_user)):
 
 
 @settings_router.post('/tokens', status_code=201)
-async def create_token(body: CreateTokenRequest, user: AimUser = Depends(get_current_user)):
+async def create_token(body: CreateTokenRequest, user: AimUser = Depends(require_editor)):
     raw_token = 'aim_tok_' + os.urandom(16).hex()
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
 

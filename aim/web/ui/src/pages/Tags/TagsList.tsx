@@ -9,6 +9,7 @@ import ErrorBoundary from 'components/ErrorBoundary/ErrorBoundary';
 import { ANALYTICS_EVENT_KEYS } from 'config/analytics/analyticsKeysMap';
 
 import * as analytics from 'services/analytics';
+import { useI18n } from 'services/i18n';
 
 import { ITagProps, ITagsListProps } from 'types/pages/tags/Tags';
 
@@ -28,6 +29,7 @@ function TagsList({
   isRunsDataLoading,
   isTagInfoDataLoading,
 }: ITagsListProps): React.FunctionComponentElement<React.ReactNode> {
+  const { t } = useI18n();
   const tableRef = useRef<any>({});
   const [isCreateModalOpened, setIsCreateModalOpened] = useState(false);
   const [isUpdateModalOpened, setIsUpdateModalOpened] = useState(false);
@@ -81,7 +83,7 @@ function TagsList({
     <div className='Tags__TagList'>
       <div className='Tags__TagList__header'>
         <TextField
-          placeholder='Search'
+          placeholder={t('tags.search')}
           variant='outlined'
           InputProps={{
             startAdornment: <Icon name='search' />,
@@ -99,7 +101,7 @@ function TagsList({
             onClick={onCreateModalToggle}
           >
             <Icon name='plus' />
-            Create Tag
+            {t('tags.createTag')}
           </Button>
         )}
       </div>
@@ -125,7 +127,7 @@ function TagsList({
           <div className='Tags__TagList__modalContainer'>
             <div className='Tags__TagList__modalContainer__titleBox'>
               <Text component='h4' weight={600} tint={100} size={14}>
-                Create Tag
+                {t('tags.createTag')}
               </Text>
             </div>
             <div className='Tags__TagList__modalContainer__contentBox'>
@@ -142,7 +144,7 @@ function TagsList({
           <div className='Tags__TagList__modalContainer'>
             <div className='Tags__TagList__modalContainer__titleBox'>
               <Text component='h4' size={14} tint={100} weight={600}>
-                Update Tag
+                {t('tags.updateTag')}
               </Text>
             </div>
             <div className='Tags__TagList__modalContainer__contentBox'>
