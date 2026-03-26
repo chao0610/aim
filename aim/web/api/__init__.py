@@ -5,10 +5,13 @@ from aim.sdk.configs import get_aim_repo_name
 from aim.web.configs import AIM_PROFILER_KEY
 from aim.web.middlewares.profiler import PyInstrumentProfilerMiddleware
 from aim.web.utils import get_root_path
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import HTTPException
+from fastapi.exceptions import ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 
 
 def create_app():
@@ -41,6 +44,12 @@ def create_app():
     api_app.add_middleware(ResourceCleanupMiddleware)
     api_app.add_exception_handler(HTTPException, http_exception_handler)
     api_app.add_exception_handler(Exception, fallback_exception_handler)
+
+    # Pydantic v2 strict response validation breaks Aim's v1-era models.
+    # Fall back to returning the raw (jsonable) response body on validation errors.
+    @api_app.exception_handler(ResponseValidationError)
+    async def _response_validation_handler(request: Request, exc: ResponseValidationError):
+        return JSONResponse(content=jsonable_encoder(exc.body))
 
     if os.environ.get(AIM_PROFILER_KEY) == '1':
         api_app.add_middleware(

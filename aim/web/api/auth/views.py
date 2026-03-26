@@ -51,8 +51,9 @@ async def login(body: LoginRequest):
     if not user.password_hash or not bcrypt.checkpw(body.password.encode(), user.password_hash.encode()):
         raise HTTPException(status_code=401, detail='Invalid username or password')
 
+    role = getattr(user, 'role', 'editor')
     return TokenResponse(
-        access_token=create_access_token(user.id, user.username),
+        access_token=create_access_token(user.id, user.username, role),
         refresh_token=create_refresh_token(user.id, user.username),
     )
 
@@ -73,8 +74,13 @@ async def refresh(body: RefreshRequest):
     if payload.get('type') != 'refresh':
         raise HTTPException(status_code=401, detail='Invalid token type')
 
+    # Look up current role from DB
+    session = auth_deps._get_db_session()
+    user = session.query(AimUser).filter(AimUser.id == payload['user_id']).first()
+    role = getattr(user, 'role', 'editor') if user else 'editor'
+
     return AccessTokenResponse(
-        access_token=create_access_token(payload['user_id'], payload['username']),
+        access_token=create_access_token(payload['user_id'], payload['username'], role),
     )
 
 
@@ -114,7 +120,8 @@ async def sso_callback(email: str, ts: str, sig: str):
         session.commit()
 
     # Issue JWT tokens
-    access_token = create_access_token(user.id, user.username)
+    role = getattr(user, 'role', 'viewer')
+    access_token = create_access_token(user.id, user.username, role)
     refresh_token = create_refresh_token(user.id, user.username)
 
     # Redirect to frontend SSO callback page with tokens in query params

@@ -22,10 +22,11 @@ def _get_secret_key() -> str:
     return key
 
 
-def create_access_token(user_id: int, username: str) -> str:
+def create_access_token(user_id: int, username: str, role: str = 'editor') -> str:
     payload = {
         'user_id': user_id,
         'username': username,
+        'role': role,
         'type': 'access',
         'exp': time.time() + AIM_ACCESS_TOKEN_EXPIRE_HOURS * 3600,
     }
