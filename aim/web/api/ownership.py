@@ -17,13 +17,18 @@ def assert_owner(obj, current_user):
 
 
 def get_visible_run_hashes(current_user):
-    """Return set of run hashes visible to the current user (owned, public, or legacy)."""
+    """Return set of run hashes visible to the current user (owned, public, or legacy).
+    Admin users can see all runs."""
     from aim.storage.structured.sql_engine.models import Run as RunModel
     from aim.web.api.utils import object_factory
 
     factory = object_factory()
     session = factory.get_session()
-    rows = owned_or_public(session.query(RunModel.hash), RunModel, current_user).all()
+    session.expire_all()
+    if getattr(current_user, 'is_admin', False):
+        rows = session.query(RunModel.hash).all()
+    else:
+        rows = owned_or_public(session.query(RunModel.hash), RunModel, current_user).all()
     return {r.hash for r in rows}
 
 
@@ -32,8 +37,11 @@ def check_run_visibility(run_hash, current_user):
     from aim.storage.structured.sql_engine.models import Run as RunModel
     from aim.web.api.utils import object_factory
 
+    if getattr(current_user, 'is_admin', False):
+        return  # Admin can see all runs
     factory = object_factory()
     session = factory.get_session()
+    session.expire_all()
     run_model = session.query(RunModel).filter(RunModel.hash == run_hash).first()
     if run_model is None:
         return  # Run not in SQL yet (legacy) — allow access

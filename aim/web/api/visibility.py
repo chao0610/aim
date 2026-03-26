@@ -24,11 +24,13 @@ async def update_run_visibility(
     current_user: AimUser = Depends(get_current_user),
 ):
     session = factory.get_session()
+    session.expire_all()
     run_model = session.query(RunModel).filter(RunModel.hash == run_id).first()
     if not run_model:
         raise HTTPException(status_code=404, detail='Run not found')
     assert_owner(run_model, current_user)
-    run_model.is_public = body.is_public
+    # Use explicit UPDATE to bypass identity map caching in scoped_session
+    session.query(RunModel).filter(RunModel.hash == run_id).update({'is_public': body.is_public})
     session.commit()
     return {'id': run_id, 'is_public': body.is_public, 'status': 'OK'}
 
@@ -42,10 +44,11 @@ async def update_experiment_visibility(
     current_user: AimUser = Depends(get_current_user),
 ):
     session = factory.get_session()
+    session.expire_all()
     exp_model = session.query(ExperimentModel).filter(ExperimentModel.uuid == exp_id).first()
     if not exp_model:
         raise HTTPException(status_code=404, detail='Experiment not found')
     assert_owner(exp_model, current_user)
-    exp_model.is_public = body.is_public
+    session.query(ExperimentModel).filter(ExperimentModel.uuid == exp_id).update({'is_public': body.is_public})
     session.commit()
     return {'id': exp_id, 'is_public': body.is_public, 'status': 'OK'}

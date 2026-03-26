@@ -2,8 +2,11 @@ from collections import Counter
 from datetime import timedelta
 from typing import Optional
 
+from sqlalchemy import func
+
 from aim.storage.structured.sql_engine.models import AimUser
 from aim.storage.structured.sql_engine.models import Experiment as ExperimentModel
+from aim.storage.structured.sql_engine.models import Run as RunModel
 from aim.web.api.auth.deps import get_current_user
 from aim.web.api.experiments.pydantic_models import (
     ExperimentActivityApiOut,
@@ -32,17 +35,33 @@ experiment_router = APIRouter()
 NOTE_NOT_FOUND = 'Note with id {id} is not found in this experiment.'
 
 
+def _visible_run_count(session, experiment_id: int, current_user: AimUser) -> int:
+    """Count runs in an experiment visible to the current user."""
+    query = session.query(func.count(RunModel.id)).filter(RunModel.experiment_id == experiment_id)
+    if not getattr(current_user, 'is_admin', False):
+        query = query.filter(
+            (RunModel.user_id == current_user.id)
+            | (RunModel.is_public == True)  # noqa: E712
+            | (RunModel.user_id == None)  # noqa: E711
+        )
+    return query.scalar() or 0
+
+
 @experiment_router.get('/', response_model=ExperimentListOut)
 async def get_experiments_list_api(factory=Depends(object_factory), current_user: AimUser = Depends(get_current_user)):
     session = factory.get_session()
+    session.expire_all()
     query = session.query(ExperimentModel)
-    filtered = owned_or_public(query, ExperimentModel, current_user)
+    if not getattr(current_user, 'is_admin', False):
+        filtered = owned_or_public(query, ExperimentModel, current_user)
+    else:
+        filtered = query
     return [
         {
             'id': exp.uuid,
             'name': exp.name,
             'description': exp.description,
-            'run_count': len(exp.runs),
+            'run_count': _visible_run_count(session, exp.id, current_user),
             'archived': exp.is_archived,
             'creation_time': exp.created_at,
         }
@@ -62,7 +81,7 @@ async def search_experiments_by_name_api(
     query = session.query(ExperimentModel).filter(ExperimentModel.name.like(f'%{search_term}%'))
     filtered = owned_or_public(query, ExperimentModel, current_user)
     return [
-        {'id': exp.uuid, 'name': exp.name, 'run_count': len(exp.runs), 'archived': exp.is_archived}
+        {'id': exp.uuid, 'name': exp.name, 'run_count': _visible_run_count(session, exp.id, current_user), 'archived': exp.is_archived}
         for exp in filtered.all()
     ]
 
@@ -104,7 +123,7 @@ async def get_experiment_api(
         'name': exp.name,
         'description': exp.description,
         'archived': exp.archived,
-        'run_count': len(exp.runs),
+        'run_count': _visible_run_count(session, model.id if model else 0, current_user),
         'creation_time': exp.creation_time,
     }
     return response
@@ -369,16 +388,27 @@ async def experiment_runs_activity_api(
 
         active_run_hashes = project.repo.list_active_runs()
 
+        # Query only visible runs for this experiment
+        is_admin = getattr(current_user, 'is_admin', False)
+        run_query = session.query(RunModel).filter(RunModel.experiment_id == model.id)
+        if not is_admin:
+            run_query = run_query.filter(
+                (RunModel.user_id == current_user.id)
+                | (RunModel.is_public == True)  # noqa: E712
+                | (RunModel.user_id == None)  # noqa: E711
+            )
+        visible_runs = run_query.all()
+
         num_runs = 0
         num_archived_runs = 0
         num_active_runs = 0
         activity_counter = Counter()
 
-        for run in experiment.runs:
+        for run in visible_runs:
             creation_time = run.created_at - timedelta(minutes=x_timezone_offset)
             activity_counter[creation_time.strftime('%Y-%m-%dT%H:00:00')] += 1
             num_runs += 1
-            if run.archived:
+            if run.is_archived:
                 num_archived_runs += 1
             if run.hash in active_run_hashes:
                 num_active_runs += 1

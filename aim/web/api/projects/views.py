@@ -14,11 +14,16 @@ from aim.web.api.projects.pydantic_models import (
     ProjectPinnedSequencesApiIn,
     ProjectPinnedSequencesApiOut,
 )
+from aim.web.api.auth.deps import get_current_user
+from aim.web.api.ownership import owned_or_public
 from aim.web.api.utils import (
-    APIRouter,  # wrapper for fastapi.APIRouter  # wrapper for fastapi.APIRouter
+    APIRouter,  # wrapper for fastapi.APIRouter
     object_factory,
 )
 from aim.web.configs import AIM_PROJECT_SETTINGS_FILE
+from aim.storage.structured.sql_engine.models import AimUser
+from aim.storage.structured.sql_engine.models import Experiment as ExperimentModel
+from aim.storage.structured.sql_engine.models import Run as RunModel
 from fastapi import Depends, Header, HTTPException, Query
 
 
@@ -63,24 +68,44 @@ async def project_api():
 
 
 @projects_router.get('/activity/', response_model=ProjectActivityApiOut)
-async def project_activity_api(x_timezone_offset: int = Header(default=0), factory=Depends(object_factory)):
+async def project_activity_api(
+    x_timezone_offset: int = Header(default=0),
+    factory=Depends(object_factory),
+    current_user: AimUser = Depends(get_current_user),
+):
     project = Project()
 
     if not project.exists():
         raise HTTPException(status_code=404)
 
+    session = factory.get_session()
+    session.expire_all()
+    is_admin = getattr(current_user, 'is_admin', False)
+
+    # Count only visible runs
+    run_query = session.query(RunModel)
+    if not is_admin:
+        run_query = owned_or_public(run_query, RunModel, current_user)
+    visible_runs = run_query.all()
+
     num_runs = 0
     num_archived_runs = 0
     activity_counter = Counter()
-    for run in factory.runs():
+    for run in visible_runs:
         creation_time = run.created_at - timedelta(minutes=x_timezone_offset)
         activity_counter[creation_time.strftime('%Y-%m-%dT%H:00:00')] += 1
         num_runs += 1
-        if run.archived:
+        if run.is_archived:
             num_archived_runs += 1
 
+    # Count only visible experiments
+    exp_query = session.query(ExperimentModel)
+    if not is_admin:
+        exp_query = owned_or_public(exp_query, ExperimentModel, current_user)
+    num_experiments = exp_query.count()
+
     return {
-        'num_experiments': len(factory.experiments()),
+        'num_experiments': num_experiments,
         'num_runs': num_runs,
         'num_archived_runs': num_archived_runs,
         'num_active_runs': len(project.repo.list_active_runs()),

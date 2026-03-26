@@ -78,6 +78,17 @@ def get_run_params(run: Run, *, skip_system: bool):
 
 
 def get_run_props(run: Run):
+    # Extract creator info from the underlying SQLAlchemy model
+    creator = None
+    try:
+        model = run.props._model
+        if model and model.owner:
+            creator = {
+                'username': model.owner.username,
+            }
+    except Exception:
+        pass
+
     return {
         'name': run.name if run.name else None,
         'description': run.description if run.description else None,
@@ -96,6 +107,8 @@ def get_run_props(run: Run):
         'creation_time': run.creation_time,
         'end_time': run.end_time,
         'active': run.active,
+        'is_public': getattr(run.props, 'is_public', False) if run.props else False,
+        'creator': creator,
     }
 
 
