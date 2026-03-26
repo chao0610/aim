@@ -14,6 +14,7 @@ const en = {
   'sidebar.settings': 'Settings',
   'sidebar.docs': 'Docs',
   'sidebar.logout': 'Logout',
+  'sidebar.adminUsers': 'User Management',
 
   // Sign In
   'signIn.title': 'Sign in to Aim',

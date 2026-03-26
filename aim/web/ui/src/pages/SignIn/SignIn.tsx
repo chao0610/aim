@@ -40,7 +40,7 @@ function SignIn(): React.FunctionComponentElement<React.ReactNode> {
       localStorage.setItem('Auth', `${data.token_type} ${data.access_token}`);
       localStorage.setItem('token', data.refresh_token);
 
-      window.location.assign(getBasePath() || '/');
+      window.location.assign(`${getBasePath() || ''}/`);
     } catch (err) {
       setError(t('signIn.failed'));
     } finally {

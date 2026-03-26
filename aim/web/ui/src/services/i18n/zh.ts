@@ -14,6 +14,7 @@ const zh = {
   'sidebar.settings': '设置',
   'sidebar.docs': '文档',
   'sidebar.logout': '登出',
+  'sidebar.adminUsers': '用户管理',
 
   // Sign In
   'signIn.title': '登录 Aim',

@@ -49,6 +49,7 @@ export interface IRunInfo {
   description: string;
   tags: any[];
   notes: number;
+  is_public?: boolean;
 }
 
 export interface IRunSelectPopoverContentProps {

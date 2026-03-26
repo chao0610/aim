@@ -4,11 +4,13 @@ import { NavLink, useRouteMatch } from 'react-router-dom';
 import classNames from 'classnames';
 import moment from 'moment';
 
-import { Box, Divider, Link } from '@material-ui/core';
+import { Box, Divider, Link, Switch } from '@material-ui/core';
 
 import { Button, Icon, Text } from 'components/kit';
 import AttachedTagsList from 'components/AttachedTagsList/AttachedTagsList';
 import CopyToClipBoard from 'components/CopyToClipBoard/CopyToClipBoard';
+
+import { getBasePath } from 'config/config';
 
 import runDetailAppModel from 'services/models/runs/runDetailAppModel';
 
@@ -36,6 +38,26 @@ function RunOverviewSidebar({
   const [seeMoreDescription, setSeeMoreDescription] =
     React.useState<boolean>(false);
   const [descriptionHeight, setDescriptionHeight] = React.useState<number>(0);
+  const [isPublic, setIsPublic] = React.useState<boolean>(
+    info?.is_public ?? false,
+  );
+
+  async function handleVisibilityToggle() {
+    const newValue = !isPublic;
+    const basePath = getBasePath();
+    const authHeader = localStorage.getItem('Auth') || '';
+    const resp = await fetch(`${basePath}/api/runs/${runHash}/visibility`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({ is_public: newValue }),
+    });
+    if (resp.ok) {
+      setIsPublic(newValue);
+    }
+  }
 
   React.useEffect(() => {
     if (
@@ -153,6 +175,17 @@ function RunOverviewSidebar({
               className='RunOverviewSidebar__section__info__listItem__copyRunHashButton'
               iconSize='small'
               copyContent={runHash}
+            />
+          </div>
+          <div className='RunOverviewSidebar__section__info__listItem'>
+            <Icon name='eye-show-outline' />
+            <Text tint={70}>{isPublic ? 'Public' : 'Private'}</Text>
+            <Switch
+              checked={isPublic}
+              onChange={handleVisibilityToggle}
+              size='small'
+              color='primary'
+              style={{ marginLeft: 'auto' }}
             />
           </div>
         </div>

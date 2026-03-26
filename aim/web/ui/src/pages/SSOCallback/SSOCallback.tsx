@@ -24,7 +24,7 @@ function SSOCallback(): React.FunctionComponentElement<React.ReactNode> {
     }
 
     // Redirect to dashboard
-    window.location.assign(getBasePath() || '/');
+    window.location.assign(`${getBasePath() || ''}/`);
   }, []);
 
   return (

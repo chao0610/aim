@@ -45,7 +45,9 @@ function createAPIRequestWrapper<ResponseDataType>(
           .then(async (response) => {
             try {
               if (response.status >= 400) {
-                const body = await response.json();
+                // Clone before reading so checkCredentials can also read the body
+                const cloned = response.clone();
+                const body = await cloned.json().catch(() => ({}));
 
                 if (typeof exceptionHandler === 'function') {
                   exceptionHandler(body);
@@ -336,6 +338,17 @@ async function parseResponse<T>(response: Response): Promise<T> {
   }
 }
 
+async function waitForRefresh(timeoutMs = 5000): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (localStorage.getItem('refreshing') !== 'true') {
+      return !!localStorage.getItem(AUTH_TOKEN_KEY);
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  return false;
+}
+
 async function checkCredentials<T>(
   response: Response,
   endpoint: string,
@@ -347,24 +360,32 @@ async function checkCredentials<T>(
       window.location.assign(`${getBasePath() || ''}/sign-in`);
       return parseResponse<T>(response);
     }
-    if (localStorage.getItem('refreshing') !== 'true') {
-      localStorage.setItem('refreshing', 'true');
-      try {
-        const token = await refreshToken().call();
-        if (token) {
-          setAuthToken(token);
-          localStorage.setItem('refreshing', 'false');
-          window.location.reload();
-          return refetch();
-        }
-      } catch (_) {
-        // refresh failed — fall through to redirect
-      } finally {
-        localStorage.setItem('refreshing', 'false');
+    // Another request is already refreshing — wait for it instead of racing
+    if (localStorage.getItem('refreshing') === 'true') {
+      const refreshed = await waitForRefresh();
+      if (refreshed) {
+        return refetch();
       }
+      // Refresh failed elsewhere, redirect
       removeAuthToken();
       window.location.assign(`${getBasePath() || ''}/sign-in`);
+      return parseResponse<T>(response);
     }
+    localStorage.setItem('refreshing', 'true');
+    try {
+      const token = await refreshToken().call();
+      if (token) {
+        setAuthToken(token);
+        localStorage.setItem('refreshing', 'false');
+        return refetch();
+      }
+    } catch (_) {
+      // refresh failed — fall through to redirect
+    } finally {
+      localStorage.setItem('refreshing', 'false');
+    }
+    removeAuthToken();
+    window.location.assign(`${getBasePath() || ''}/sign-in`);
   }
   return parseResponse<T>(response);
 }
